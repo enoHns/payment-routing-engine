@@ -35,14 +35,14 @@
     "@types/bull": "^3.10.7",
     "@types/ioredis": "^4.14.6",
     "@types/jest": "^24.0.23",
-    "@types/node": "^12.12.6",
+    "@types/node": "^12.12.7",
     "@types/pino": "^5.17.0",
     "@types/uuid": "^3.4.6",
     "jest": "^24.9.0",
     "nodemon": "^2.0.1",
-    "ts-jest": "^24.1.0",
+    "ts-jest": "^24.2.0",
     "ts-node": "^8.5.4",
     "tsconfig-paths": "^3.9.0",
-    "typescript": "^3.6.4"
+    "typescript": "^3.7.2"
   }
 }
