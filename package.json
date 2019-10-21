@@ -14,7 +14,10 @@
     "test": "jest --forceExit --detectOpenHandles",
     "test:coverage": "jest --forceExit --coverage",
     "test:watch": "jest --watch",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "migration:run": "ts-node -r tsconfig-paths/register ./node_modules/.bin/typeorm migration:run",
+    "migration:revert": "ts-node -r tsconfig-paths/register ./node_modules/.bin/typeorm migration:revert",
+    "migration:generate": "ts-node -r tsconfig-paths/register ./node_modules/.bin/typeorm migration:generate"
   },
   "dependencies": {
     "@hapi/joi": "^16.1.8",
@@ -28,6 +31,7 @@
     "pg": "^7.14.0",
     "pino": "^5.17.0",
     "pino-pretty": "^3.6.1",
+    "reflect-metadata": "^0.1.13",
     "typeorm": "^0.2.20",
     "uuid": "^3.4.0"
   },
