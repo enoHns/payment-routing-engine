@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import { createConnection, Connection } from 'typeorm';
 import { env } from '../config/env';
 import logger from '../config/logger';
@@ -19,10 +20,10 @@ export async function connectDatabase(): Promise<Connection> {
       logging: env.NODE_ENV === 'development' ? ['error', 'warn'] : false,
     });
 
-    logger.info('Database connected');
+    logger.info({ event: 'db_connected' }, 'Database connected');
     return connection;
   } catch (err) {
-    logger.error({ err }, 'Database connection failed');
+    logger.error({ err, event: 'db_connect_failed' }, 'Database connection failed');
     throw err;
   }
 }
@@ -31,7 +32,7 @@ export async function disconnectDatabase(): Promise<void> {
   if (connection && connection.isConnected) {
     await connection.close();
     connection = null;
-    logger.info('Database disconnected');
+    logger.info({ event: 'db_disconnected' }, 'Database disconnected');
   }
 }
 
