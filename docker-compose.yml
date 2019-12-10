@@ -18,6 +18,18 @@ services:
       timeout: 5s
       retries: 5
 
+  postgres_test:
+    image: postgres:11-alpine
+    environment:
+      POSTGRES_USER: routing_test
+      POSTGRES_PASSWORD: routing_secret
+      POSTGRES_DB: routing_engine_test
+    ports:
+      - '5433:5432'
+    tmpfs:
+      - /var/lib/postgresql/data
+    restart: 'no'
+
   redis:
     image: redis:5-alpine
     ports:
