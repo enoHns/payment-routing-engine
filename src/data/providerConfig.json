@@ -1,0 +1,25 @@
+{
+  "version": "1.0.0",
+  "providers": [
+    {
+      "name": "kkiapay",
+      "displayName": "Kkiapay",
+      "supportedCountries": ["BJ"],
+      "supportedOperators": {
+        "BJ": ["MTN", "Moov"]
+      },
+      "priority": 1,
+      "active": true
+    },
+    {
+      "name": "fedapay",
+      "displayName": "FedaPay",
+      "supportedCountries": ["BJ"],
+      "supportedOperators": {
+        "BJ": ["MTN", "Moov", "Celtiis"]
+      },
+      "priority": 2,
+      "active": true
+    }
+  ]
+}
