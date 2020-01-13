@@ -7,52 +7,46 @@ export interface ResolveResult {
   normalized: string;
 }
 
-// Normalize to E.164-ish local format: strip leading +, country code
-function normalize(phone: string, countryCode: string): string {
-  // Remove spaces, dashes, dots
+const CALLING_CODES: Record<string, string> = {
+  BJ: '229',
+  CI: '225',
+  SN: '221',
+  TG: '228',
+  NE: '227',
+  GN: '224',
+  ML: '223',
+  BF: '226',
+  CM: '237',
+  SL: '232',
+};
+
+export function normalizePhone(phone: string, country: string): string {
   let p = phone.replace(/[\s\-\.]/g, '');
-
-  // Strip leading +
-  if (p.startsWith('+')) {
-    p = p.slice(1);
-  }
-
-  // Strip country calling code if present
-  const callingCodes: Record<string, string> = {
-    BJ: '229',
-    CI: '225',
-    SN: '221',
-    TG: '228',
-    NE: '227',
-    GN: '224',
-    ML: '223',
-    BF: '226',
-    CM: '237',
-    SL: '232',
-  };
-
-  const cc = callingCodes[countryCode];
-  if (cc && p.startsWith(cc)) {
-    p = p.slice(cc.length);
-  }
-
+  if (p.startsWith('+')) p = p.slice(1);
+  const cc = CALLING_CODES[country];
+  if (cc && p.startsWith(cc)) p = p.slice(cc.length);
   return p;
 }
 
 export function resolveOperator(phone: string, country: string): ResolveResult {
   const countryData = (registry.countries as Record<string, any>)[country];
-  if (!countryData) {
-    throw new Error(`Unsupported country: ${country}`);
-  }
+  if (!countryData) throw new Error(`Unsupported country: ${country}`);
 
-  const normalized = normalize(phone, country);
+  const normalized = normalizePhone(phone, country);
 
+  // Sort prefixes by length descending — longest match wins
+  const candidates: Array<{ operator: string; prefix: string }> = [];
   for (const op of countryData.operators) {
-    for (const prefix of op.prefixes) {
-      if (normalized.startsWith(prefix)) {
-        logger.debug({ phone: normalized, operator: op.name, country }, 'Operator resolved');
-        return { operator: op.name, country, normalized };
-      }
+    for (const prefix of op.prefixes as string[]) {
+      candidates.push({ operator: op.name, prefix });
+    }
+  }
+  candidates.sort((a, b) => b.prefix.length - a.prefix.length);
+
+  for (const { operator, prefix } of candidates) {
+    if (normalized.startsWith(prefix)) {
+      logger.debug({ normalized, operator, country }, 'Operator resolved');
+      return { operator, country, normalized };
     }
   }
 
