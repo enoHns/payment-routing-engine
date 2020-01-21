@@ -1,30 +1,24 @@
-import { resolveOperator } from '../../src/core/phoneResolver';
+import { resolveOperator, normalizePhone } from '../../src/core/phoneResolver';
 
 describe('phoneResolver — Bénin', () => {
   it('resolves MTN prefix 96', () => {
-    const result = resolveOperator('96123456', 'BJ');
-    expect(result.operator).toBe('MTN');
-    expect(result.country).toBe('BJ');
+    expect(resolveOperator('96123456', 'BJ').operator).toBe('MTN');
   });
 
   it('resolves MTN prefix 97', () => {
-    const result = resolveOperator('97456789', 'BJ');
-    expect(result.operator).toBe('MTN');
+    expect(resolveOperator('97456789', 'BJ').operator).toBe('MTN');
   });
 
   it('resolves Moov prefix 98', () => {
-    const result = resolveOperator('98001234', 'BJ');
-    expect(result.operator).toBe('Moov');
+    expect(resolveOperator('98001234', 'BJ').operator).toBe('Moov');
   });
 
   it('resolves Moov prefix 64', () => {
-    const result = resolveOperator('64112233', 'BJ');
-    expect(result.operator).toBe('Moov');
+    expect(resolveOperator('64112233', 'BJ').operator).toBe('Moov');
   });
 
   it('resolves Celtiis prefix 68', () => {
-    const result = resolveOperator('68001122', 'BJ');
-    expect(result.operator).toBe('Celtiis');
+    expect(resolveOperator('68001122', 'BJ').operator).toBe('Celtiis');
   });
 
   it('strips country code +229', () => {
@@ -34,14 +28,11 @@ describe('phoneResolver — Bénin', () => {
   });
 
   it('strips country code without +', () => {
-    const result = resolveOperator('22997001122', 'BJ');
-    expect(result.operator).toBe('MTN');
-    expect(result.normalized).toBe('97001122');
+    expect(resolveOperator('22997001122', 'BJ').normalized).toBe('97001122');
   });
 
   it('strips spaces from phone', () => {
-    const result = resolveOperator('96 12 34 56', 'BJ');
-    expect(result.operator).toBe('MTN');
+    expect(resolveOperator('96 12 34 56', 'BJ').operator).toBe('MTN');
   });
 
   it('throws for unknown prefix in known country', () => {
@@ -50,5 +41,35 @@ describe('phoneResolver — Bénin', () => {
 
   it('throws for unsupported country', () => {
     expect(() => resolveOperator('96123456', 'XX')).toThrow('Unsupported country');
+  });
+});
+
+describe('phoneResolver — Côte d\'Ivoire', () => {
+  it('resolves Orange CI prefix 07', () => {
+    expect(resolveOperator('0712345678', 'CI').operator).toBe('Orange');
+  });
+
+  it('resolves MTN CI prefix 05', () => {
+    expect(resolveOperator('0512345678', 'CI').operator).toBe('MTN');
+  });
+
+  it('resolves Moov CI prefix 01', () => {
+    expect(resolveOperator('0112345678', 'CI').operator).toBe('Moov');
+  });
+
+  it('strips CI country code +225', () => {
+    const result = resolveOperator('+2250712345678', 'CI');
+    expect(result.operator).toBe('Orange');
+    expect(result.normalized).toBe('0712345678');
+  });
+});
+
+describe('normalizePhone', () => {
+  it('removes dashes', () => {
+    expect(normalizePhone('96-12-34-56', 'BJ')).toBe('96123456');
+  });
+
+  it('removes dots', () => {
+    expect(normalizePhone('96.12.34.56', 'BJ')).toBe('96123456');
   });
 });
