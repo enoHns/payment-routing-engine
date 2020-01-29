@@ -20,6 +20,43 @@
       },
       "priority": 2,
       "active": true
+    },
+    {
+      "name": "cinetpay",
+      "displayName": "CinetPay",
+      "supportedCountries": ["CI", "SN", "TG", "BF", "CM"],
+      "supportedOperators": {
+        "CI": ["Orange", "MTN", "Moov"],
+        "SN": ["Orange", "Free", "Wave"],
+        "TG": ["Togocel", "Moov"]
+      },
+      "priority": 1,
+      "active": true
+    },
+    {
+      "name": "feexpay",
+      "displayName": "FeexPay",
+      "supportedCountries": ["BJ", "CI", "TG", "SN"],
+      "supportedOperators": {
+        "BJ": ["MTN", "Moov"],
+        "CI": ["Orange", "MTN"],
+        "TG": ["Togocel", "Moov"],
+        "SN": ["Orange", "Free"]
+      },
+      "priority": 2,
+      "active": true
+    },
+    {
+      "name": "paydunya",
+      "displayName": "PayDunya",
+      "supportedCountries": ["SN", "CI", "BF", "ML", "NE"],
+      "supportedOperators": {
+        "SN": ["Orange", "Free", "Wave"],
+        "CI": ["Orange", "MTN", "Moov"],
+        "NE": ["Airtel", "Moov"]
+      },
+      "priority": 3,
+      "active": true
     }
   ]
 }
