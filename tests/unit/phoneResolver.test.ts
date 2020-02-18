@@ -73,3 +73,29 @@ describe('normalizePhone', () => {
     expect(normalizePhone('96.12.34.56', 'BJ')).toBe('96123456');
   });
 });
+
+import { tryResolveOperator, isSupportedCountry } from '../../src/core/phoneResolver';
+
+describe('tryResolveOperator', () => {
+  it('returns result for valid phone', () => {
+    expect(tryResolveOperator('96123456', 'BJ')).not.toBeNull();
+  });
+
+  it('returns null for unknown prefix', () => {
+    expect(tryResolveOperator('70000000', 'BJ')).toBeNull();
+  });
+
+  it('returns null for unsupported country', () => {
+    expect(tryResolveOperator('96123456', 'XX')).toBeNull();
+  });
+});
+
+describe('isSupportedCountry', () => {
+  it('returns true for BJ', () => {
+    expect(isSupportedCountry('BJ')).toBe(true);
+  });
+
+  it('returns false for unknown', () => {
+    expect(isSupportedCountry('XX')).toBe(false);
+  });
+});
