@@ -7,12 +7,13 @@ async function bootstrap() {
   logger.info('Payment Routing Engine — starting up...');
 
   await connectDatabase();
-  getRedisClient(); // initialise connection
+  getRedisClient();
 
   logger.info('Infrastructure ready. Routing engine online.');
 
   // TODO: start Fastify server
   // TODO: register BullMQ workers
+  // TODO: wire up routing pipeline
 }
 
 async function gracefulShutdown(signal: string) {
@@ -24,6 +25,10 @@ async function gracefulShutdown(signal: string) {
 
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('unhandledRejection', (reason) => {
+  logger.error({ reason }, 'Unhandled promise rejection');
+  process.exit(1);
+});
 
 bootstrap().catch(err => {
   logger.error({ err }, 'Fatal startup error');
