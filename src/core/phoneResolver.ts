@@ -1,4 +1,4 @@
-import registry from '../data/operatorRegistry.json';
+import { getCountryDef } from './registryLoader';
 import { normalizePhone } from '../utils/phone';
 import logger from '../config/logger';
 
@@ -10,10 +10,10 @@ export interface ResolveResult {
   normalized: string;
 }
 
-function buildCandidates(countryData: any): Array<{ operator: string; prefix: string }> {
+function buildCandidates(operators: Array<{ name: string; prefixes: string[] }>) {
   const candidates: Array<{ operator: string; prefix: string }> = [];
-  for (const op of countryData.operators) {
-    for (const prefix of op.prefixes as string[]) {
+  for (const op of operators) {
+    for (const prefix of op.prefixes) {
       candidates.push({ operator: op.name, prefix });
     }
   }
@@ -21,11 +21,11 @@ function buildCandidates(countryData: any): Array<{ operator: string; prefix: st
 }
 
 export function resolveOperator(phone: string, country: string): ResolveResult {
-  const countryData = (registry.countries as Record<string, any>)[country];
-  if (!countryData) throw new Error(`Unsupported country: ${country}`);
+  const countryDef = getCountryDef(country);
+  if (!countryDef) throw new Error(`Unsupported country: ${country}`);
 
   const normalized = normalizePhone(phone, country);
-  const candidates = buildCandidates(countryData);
+  const candidates = buildCandidates(countryDef.operators);
 
   for (const { operator, prefix } of candidates) {
     if (normalized.startsWith(prefix)) {
@@ -37,10 +37,6 @@ export function resolveOperator(phone: string, country: string): ResolveResult {
   throw new Error(`Unknown operator for phone ${normalized} in ${country}`);
 }
 
-/**
- * Safe variant — returns null instead of throwing.
- * Useful for logging unrecognised numbers without crashing the pipeline.
- */
 export function tryResolveOperator(phone: string, country: string): ResolveResult | null {
   try {
     return resolveOperator(phone, country);
@@ -51,5 +47,5 @@ export function tryResolveOperator(phone: string, country: string): ResolveResul
 }
 
 export function isSupportedCountry(country: string): boolean {
-  return Object.prototype.hasOwnProperty.call(registry.countries, country);
+  return getCountryDef(country) !== undefined;
 }
