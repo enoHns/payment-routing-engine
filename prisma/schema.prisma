@@ -1,0 +1,98 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Transaction {
+  id                String      @id @default(uuid())
+  idempotencyKey    String      @unique
+  phone             String
+  amount            Int
+  currency          String      @default("XOF")
+  country           String
+  operator          String?
+  status            TxStatus    @default(INITIATED)
+  clientCallbackUrl String?
+  metadata          Json?
+  settledAt         DateTime?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  attempts          Attempt[]
+  auditLogs         AuditLog[]
+
+  @@index([phone])
+  @@index([status])
+  @@index([createdAt])
+  @@map("transactions")
+}
+
+enum TxStatus {
+  INITIATED
+  OPERATOR_DETECTED
+  PROVIDER_SELECTED
+  PROCESSING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+model Attempt {
+  id             String        @id @default(uuid())
+  transactionId  String
+  providerName   String
+  providerTxId   String?
+  status         AttemptStatus @default(PENDING)
+  score          Float
+  latencyMs      Int?
+  errorCode      String?
+  errorMessage   String?
+  webhookPayload Json?
+  createdAt      DateTime      @default(now())
+  resolvedAt     DateTime?
+  transaction    Transaction   @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([transactionId])
+  @@index([providerName, status])
+  @@map("attempts")
+}
+
+enum AttemptStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  TIMEOUT
+}
+
+model ProviderMetric {
+  id             String   @id @default(uuid())
+  providerName   String
+  operator       String
+  country        String
+  windowStart    DateTime
+  successCount   Int      @default(0)
+  failureCount   Int      @default(0)
+  totalLatencyMs BigInt   @default(0)
+  sampleCount    Int      @default(0)
+  score          Float    @default(0.5)
+  updatedAt      DateTime @updatedAt
+
+  @@unique([providerName, operator, country, windowStart])
+  @@index([providerName, operator, country])
+  @@map("provider_metrics")
+}
+
+model AuditLog {
+  id            String      @id @default(uuid())
+  transactionId String
+  event         String
+  payload       Json?
+  createdAt     DateTime    @default(now())
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([transactionId])
+  @@map("audit_logs")
+}
