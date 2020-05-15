@@ -1,5 +1,5 @@
-import { getConnection } from '../connection';
-import { ProviderMetricEntity } from '../entities/providerMetric.entity';
+import { ProviderMetric } from '@prisma/client';
+import { getPrismaClient } from '../prismaClient';
 
 type Outcome = 'SUCCESS' | 'FAILURE';
 
@@ -11,34 +11,32 @@ export async function upsertMetricWindow(
   outcome: Outcome,
   latencyMs?: number,
 ): Promise<void> {
-  const conn = getConnection();
-  const lat = latencyMs ?? 0;
+  const prisma = getPrismaClient();
+  const lat = BigInt(latencyMs ?? 0);
 
   if (outcome === 'SUCCESS') {
-    await conn.query(
-      `INSERT INTO provider_metrics
-         (id, "providerName", operator, country, "windowStart", "successCount", "totalLatencyMs", "sampleCount", "updatedAt")
-       VALUES (uuid_generate_v4(), $1, $2, $3, $4, 1, $5, 1, now())
-       ON CONFLICT ("providerName", operator, country, "windowStart")
-       DO UPDATE SET
-         "successCount"   = provider_metrics."successCount" + 1,
-         "totalLatencyMs" = provider_metrics."totalLatencyMs" + $5,
-         "sampleCount"    = provider_metrics."sampleCount" + 1,
-         "updatedAt"      = now()`,
-      [providerName, operator, country, windowStart, lat],
-    );
+    await prisma.$executeRaw`
+      INSERT INTO provider_metrics
+        (id, "providerName", operator, country, "windowStart", "successCount", "totalLatencyMs", "sampleCount", "updatedAt")
+      VALUES (gen_random_uuid(), ${providerName}, ${operator}, ${country}, ${windowStart}, 1, ${lat}, 1, now())
+      ON CONFLICT ("providerName", operator, country, "windowStart")
+      DO UPDATE SET
+        "successCount"   = provider_metrics."successCount" + 1,
+        "totalLatencyMs" = provider_metrics."totalLatencyMs" + ${lat},
+        "sampleCount"    = provider_metrics."sampleCount" + 1,
+        "updatedAt"      = now()
+    `;
   } else {
-    await conn.query(
-      `INSERT INTO provider_metrics
-         (id, "providerName", operator, country, "windowStart", "failureCount", "sampleCount", "updatedAt")
-       VALUES (uuid_generate_v4(), $1, $2, $3, $4, 1, 1, now())
-       ON CONFLICT ("providerName", operator, country, "windowStart")
-       DO UPDATE SET
-         "failureCount" = provider_metrics."failureCount" + 1,
-         "sampleCount"  = provider_metrics."sampleCount" + 1,
-         "updatedAt"    = now()`,
-      [providerName, operator, country, windowStart],
-    );
+    await prisma.$executeRaw`
+      INSERT INTO provider_metrics
+        (id, "providerName", operator, country, "windowStart", "failureCount", "sampleCount", "updatedAt")
+      VALUES (gen_random_uuid(), ${providerName}, ${operator}, ${country}, ${windowStart}, 1, 1, now())
+      ON CONFLICT ("providerName", operator, country, "windowStart")
+      DO UPDATE SET
+        "failureCount" = provider_metrics."failureCount" + 1,
+        "sampleCount"  = provider_metrics."sampleCount" + 1,
+        "updatedAt"    = now()
+    `;
   }
 }
 
@@ -47,31 +45,19 @@ export async function getRecentMetrics(
   operator: string,
   country: string,
   hoursBack: number,
-): Promise<ProviderMetricEntity[]> {
+): Promise<ProviderMetric[]> {
   const cutoff = new Date(Date.now() - hoursBack * 3600 * 1000);
-  return getConnection()
-    .getRepository(ProviderMetricEntity)
-    .createQueryBuilder('m')
-    .where('m.providerName = :providerName', { providerName })
-    .andWhere('m.operator = :operator', { operator })
-    .andWhere('m.country = :country', { country })
-    .andWhere('m.windowStart >= :cutoff', { cutoff })
-    .orderBy('m.windowStart', 'DESC')
-    .getMany();
+  return getPrismaClient().providerMetric.findMany({
+    where: { providerName, operator, country, windowStart: { gte: cutoff } },
+    orderBy: { windowStart: 'desc' },
+  });
 }
 
 export async function getAllProviderCombinations(): Promise<
   Array<{ providerName: string; operator: string; country: string }>
 > {
-  const rows = await getConnection()
-    .getRepository(ProviderMetricEntity)
-    .createQueryBuilder('m')
-    .select('DISTINCT m.providerName, m.operator, m.country')
-    .getRawMany();
-
-  return rows.map(r => ({
-    providerName: r.providerName,
-    operator: r.operator,
-    country: r.country,
-  }));
+  const rows = await getPrismaClient().$queryRaw<Array<{ providerName: string; operator: string; country: string }>>`
+    SELECT DISTINCT "providerName", operator, country FROM provider_metrics
+  `;
+  return rows;
 }
