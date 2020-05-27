@@ -1,17 +1,12 @@
-import { getPrismaClient, disconnectPrisma } from './db/prismaClient';
+import { connectWithRetry, disconnectPrisma } from './db/prismaClient';
 import { getRedisClient, closeRedis } from './cache/redis';
 import logger from './config/logger';
 
 async function bootstrap() {
   logger.info('Payment Routing Engine — starting up...');
-
-  // Warm Prisma connection
-  await getPrismaClient().$connect();
-  logger.info({ event: 'db_connected' }, 'Prisma connected');
-
+  await connectWithRetry();
   getRedisClient();
-
-  logger.info('Infrastructure ready. Routing engine online.');
+  logger.info('Infrastructure ready.');
   // TODO: start Fastify server
   // TODO: register BullMQ workers
 }
