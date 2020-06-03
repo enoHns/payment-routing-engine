@@ -1,90 +1,48 @@
-// Unit tests for transactionRepo
-// Note: these tests require a running PostgreSQL instance
-// Use TEST_DATABASE_URL env variable to point to a test DB
+import { createTransaction, findTransactionById, updateTransactionStatus } from '../../src/db/repositories/transactionRepo';
+import { TxStatus } from '@prisma/client';
 
-import {
-  createTransaction,
-  findTransactionById,
-  findTransactionByIdempotencyKey,
-  updateTransactionStatus,
-} from '../../src/db/repositories/transactionRepo';
-import { connectDatabase, disconnectDatabase } from '../../src/db/connection';
-import { TxStatus } from '../../src/db/entities/transaction.entity';
+const mockPrisma = {
+  transaction: {
+    create:     jest.fn(),
+    findUnique: jest.fn(),
+    update:     jest.fn(),
+    findMany:   jest.fn(),
+  },
+};
 
-const TEST_DB = process.env.TEST_DATABASE_URL;
+jest.mock('../../src/db/prismaClient', () => ({
+  getPrismaClient: () => mockPrisma,
+}));
 
-// Skip tests if no test DB configured
-const describeIfDb = TEST_DB ? describe : describe.skip;
-
-describeIfDb('transactionRepo', () => {
-  beforeAll(async () => {
-    process.env.DATABASE_URL = TEST_DB!;
-    await connectDatabase();
-  });
-
-  afterAll(async () => {
-    await disconnectDatabase();
-  });
+describe('transactionRepo', () => {
+  beforeEach(() => jest.clearAllMocks());
 
   it('creates a transaction', async () => {
-    const tx = await createTransaction({
-      idempotencyKey: `test-${Date.now()}`,
-      phone: '22961000000',
-      amount: 5000,
-      currency: 'XOF',
-      country: 'BJ',
-    });
-
-    expect(tx.id).toBeDefined();
-    expect(tx.status).toBe(TxStatus.INITIATED);
-    expect(tx.amount).toBe(5000);
+    const data = { idempotencyKey: 'k1', phone: '96123456', amount: 5000, currency: 'XOF', country: 'BJ' };
+    mockPrisma.transaction.create.mockResolvedValue({ id: 'uuid-1', ...data, status: 'INITIATED' });
+    const tx = await createTransaction(data);
+    expect(mockPrisma.transaction.create).toHaveBeenCalledWith({ data });
+    expect(tx.id).toBe('uuid-1');
   });
 
   it('finds transaction by id', async () => {
-    const created = await createTransaction({
-      idempotencyKey: `test-find-${Date.now()}`,
-      phone: '22961000001',
-      amount: 1000,
-      currency: 'XOF',
-      country: 'BJ',
-    });
-
-    const found = await findTransactionById(created.id);
-    expect(found).toBeDefined();
-    expect(found!.id).toBe(created.id);
+    mockPrisma.transaction.findUnique.mockResolvedValue({ id: 'uuid-1', attempts: [] });
+    const tx = await findTransactionById('uuid-1');
+    expect(tx).not.toBeNull();
+    expect(mockPrisma.transaction.findUnique).toHaveBeenCalledWith({ where: { id: 'uuid-1' }, include: { attempts: true } });
   });
 
-  it('finds transaction by idempotency key', async () => {
-    const key = `idem-${Date.now()}`;
-    await createTransaction({
-      idempotencyKey: key,
-      phone: '22961000002',
-      amount: 2000,
-      currency: 'XOF',
-      country: 'BJ',
-    });
-
-    const found = await findTransactionByIdempotencyKey(key);
-    expect(found).toBeDefined();
-    expect(found!.idempotencyKey).toBe(key);
-  });
-
-  it('returns undefined for unknown idempotency key', async () => {
-    const found = await findTransactionByIdempotencyKey('does-not-exist');
-    expect(found).toBeUndefined();
+  it('returns null for unknown id', async () => {
+    mockPrisma.transaction.findUnique.mockResolvedValue(null);
+    expect(await findTransactionById('no-such-id')).toBeNull();
   });
 
   it('updates transaction status', async () => {
-    const tx = await createTransaction({
-      idempotencyKey: `test-update-${Date.now()}`,
-      phone: '22961000003',
-      amount: 3000,
-      currency: 'XOF',
-      country: 'BJ',
+    mockPrisma.transaction.update.mockResolvedValue({});
+    await updateTransactionStatus('uuid-1', TxStatus.PROCESSING);
+    expect(mockPrisma.transaction.update).toHaveBeenCalledWith({
+      where: { id: 'uuid-1' },
+      data:  { status: TxStatus.PROCESSING },
     });
-
-    await updateTransactionStatus(tx.id, TxStatus.PROCESSING);
-    const updated = await findTransactionById(tx.id);
-    expect(updated!.status).toBe(TxStatus.PROCESSING);
   });
 });
