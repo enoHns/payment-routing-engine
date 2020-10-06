@@ -1,52 +1,53 @@
-import Bull from 'bull';
-import { getRedisClient } from '../cache/redis';
+import { Queue } from 'bullmq';
+import { env } from '../config/env';
 import logger from '../config/logger';
 
 export interface RoutingJobPayload {
-  transactionId:  string;
-  phone:          string;
-  amount:         number;
-  currency:       string;
-  country:        string;
-  operator:       string;
-  attemptNumber:  number;
+  transactionId:    string;
+  phone:            string;
+  amount:           number;
+  currency:         string;
+  country:          string;
+  operator:         string;
+  attemptNumber:    number;
   excludeProviders: string[];
-  webhookUrl:     string;
+  webhookUrl:       string;
 }
 
 const QUEUE_NAME = 'routing';
+const connection = {
+  host: new URL(env.REDIS_URL).hostname,
+  port: parseInt(new URL(env.REDIS_URL).port || '6379'),
+};
 
-let queue: Bull.Queue<RoutingJobPayload> | null = null;
+let queue: Queue<RoutingJobPayload> | null = null;
 
-export function getRoutingQueue(): Bull.Queue<RoutingJobPayload> {
+export function getRoutingQueue(): Queue<RoutingJobPayload> {
   if (!queue) {
-    const redis = getRedisClient();
-
-    queue = new Bull<RoutingJobPayload>(QUEUE_NAME, {
-      createClient: (type) => {
-        if (type === 'client') return redis;
-        // Bull needs separate connections for subscriber/bclient
-        return (redis as any).duplicate();
-      },
+    queue = new Queue<RoutingJobPayload>(QUEUE_NAME, {
+      connection,
       defaultJobOptions: {
-        attempts:    1,
-        removeOnComplete: 100,
-        removeOnFail:     200,
+        attempts:         1,
+        removeOnComplete: { count: 100 },
+        removeOnFail:     { count: 200 },
       },
     });
-
     queue.on('error', (err) => logger.error({ err }, 'Routing queue error'));
-    queue.on('failed', (job, err) => {
-      logger.error({ jobId: job.id, transactionId: job.data.transactionId, err }, 'Job failed');
-    });
   }
-
   return queue;
 }
 
 export async function enqueueRoutingJob(
   payload: RoutingJobPayload,
   delayMs = 0,
-): Promise<Bull.Job<RoutingJobPayload>> {
-  return getRoutingQueue().add(payload, { delay: delayMs });
+): Promise<void> {
+  await getRoutingQueue().add('route', payload, { delay: delayMs });
+  logger.debug({ transactionId: payload.transactionId }, 'Routing job enqueued');
+}
+
+export async function closeQueue(): Promise<void> {
+  if (queue) {
+    await queue.close();
+    queue = null;
+  }
 }
