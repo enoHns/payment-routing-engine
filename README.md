@@ -4,10 +4,10 @@ Server-side payment routing engine for West Africa mobile money.
 
 ## Stack
 
-- **Runtime**: Node.js 12, TypeScript 3.9
+- **Runtime**: Node.js 12, TypeScript 4.0
 - **Framework**: Fastify 3
 - **ORM**: Prisma 2 + PostgreSQL 11
-- **Queue**: Bull 3 + Redis 5
+- **Queue**: BullMQ 1 + Redis 5
 - **Tests**: Jest 26
 
 ## Quick start
@@ -20,35 +20,44 @@ npx prisma migrate dev
 npm run dev
 ```
 
-## Architecture
+## Routing pipeline
 
 ```
-src/
-  config/         env validation (joi), pino logger
-  core/           phoneResolver, providerRegistry, registryLoader
-  data/           operatorRegistry.json (v1.3.0), providerConfig.json
-  db/             Prisma client + 4 repositories
-  cache/          ioredis client
-  providers/      5 payment adapters + adapterFactory
-  routes/         /health
-  plugins/        errorHandler
-  utils/          phone, crypto, httpError
+POST /payment
+  → phone resolver   (operator detection from prefix)
+  → eligibility      (getEligibleProviders by country/operator)
+  → scoring          (success rate + latency + priority — 24h window)
+  → BullMQ job       (enqueueRoutingJob)
+
+Worker picks up job:
+  → buildFallbackChain (ordered providers by score)
+  → adapter.initiatePayment
+  → on retryable error → enqueue next provider
+
+POST /webhook/:provider
+  → verifyWebhook signature (HMAC or IP whitelist)
+  → resolve attempt
+  → update transaction status
+  → recordAttemptOutcome → invalidate score cache
 ```
 
-## Supported providers
+## Scoring formula
 
-| Provider  | Countries       | Webhook     |
-|-----------|-----------------|-------------|
-| Kkiapay   | BJ              | HMAC-SHA256 |
-| FedaPay   | BJ              | HMAC-SHA512 |
-| CinetPay  | CI, SN, TG      | IP whitelist|
-| FeexPay   | BJ, CI, TG, SN  | HMAC-SHA256 |
-| PayDunya   | SN, CI, NE      | HMAC-SHA256 |
+```
+score = 0.5 × successRate + 0.3 × latencyScore + 0.2 × priorityScore
+```
+
+- **successRate**: success / (success + failure) over last 24h windows
+- **latencyScore**: 1 - avgLatency / 5000ms, clamped to [0,1]
+- **priorityScore**: normalized inverse of provider priority
+- Cold start: each component defaults to 0.5
 
 ## API
 
-- `GET /health` — liveness + readiness (postgres + redis)
+| Method | Path    | Description          |
+|--------|---------|----------------------|
+| GET    | /health | Liveness + readiness |
 
 ---
 
-*Work in progress — scoring engine and routing pipeline coming next.*
+*Work in progress — API routes and webhook endpoint coming next.*
