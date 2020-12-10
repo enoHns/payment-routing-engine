@@ -1,6 +1,15 @@
-import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import { processWebhook } from '../handlers/webhookHandler';
 import logger from '../config/logger';
+
+function extractSignature(req: FastifyRequest): string | undefined {
+  return (
+    req.headers['x-webhook-signature']    ??
+    req.headers['x-kkiapay-signature']    ??
+    req.headers['x-feexpay-signature']    ??
+    req.headers['x-paydunya-signature']
+  ) as string | undefined;
+}
 
 export const webhookRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.addContentTypeParser(
@@ -8,8 +17,7 @@ export const webhookRoutes: FastifyPluginAsync = async (fastify) => {
     { parseAs: 'buffer' },
     (_req, body, done) => {
       try {
-        const parsed = JSON.parse((body as Buffer).toString('utf-8'));
-        done(null, { _raw: body, ...parsed });
+        done(null, JSON.parse((body as Buffer).toString('utf-8')));
       } catch (err) {
         done(err as Error, undefined);
       }
@@ -18,20 +26,16 @@ export const webhookRoutes: FastifyPluginAsync = async (fastify) => {
 
   fastify.post<{ Params: { provider: string } }>(
     '/webhook/:provider',
-    async (request: FastifyRequest<{ Params: { provider: string } }>, reply: FastifyReply) => {
+    async (request, reply) => {
       const { provider } = request.params;
-      const body         = request.body as Record<string, unknown>;
-      const { _raw, ...payload } = body;
-      const signature = (request.headers['x-webhook-signature']
-        ?? request.headers['x-kkiapay-signature']
-        ?? request.headers['x-feexpay-signature']) as string | undefined;
+      const signature    = extractSignature(request);
+      const payload      = request.body as Record<string, unknown>;
 
       try {
         const result = await processWebhook(provider, payload, signature);
-        logger.info({ provider, result }, 'Webhook processed');
         return reply.code(200).send({ received: true, status: result.status });
       } catch (err) {
-        logger.error({ provider, err }, 'Webhook processing error');
+        logger.error({ provider, err }, 'Webhook processing unhandled error');
         return reply.code(200).send({ received: true, status: 'ERROR' });
       }
     },
