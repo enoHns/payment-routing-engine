@@ -18,20 +18,18 @@ const bodySchema = Joi.object({
   currency:       Joi.string().length(3).uppercase().required(),
   idempotencyKey: Joi.string().uuid().optional(),
   webhookUrl:     Joi.string().uri().optional(),
-}).options({ allowUnknown: false });
+}).options({ allowUnknown: false, abortEarly: true });
+
+function validationError(reply: FastifyReply, message: string) {
+  return reply.code(400).send({ statusCode: 400, error: 'Bad Request', message });
+}
 
 export const paymentRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{ Body: InitiatePaymentBody }>(
     '/payment',
     async (request: FastifyRequest<{ Body: InitiatePaymentBody }>, reply: FastifyReply) => {
       const { error, value } = bodySchema.validate(request.body);
-      if (error) {
-        return reply.code(400).send({
-          statusCode: 400,
-          error:      'Bad Request',
-          message:    error.details[0].message,
-        });
-      }
+      if (error) return validationError(reply, error.details[0].message);
 
       const { phone, amount, currency, idempotencyKey, webhookUrl } = value;
       const normalized = normalizePhone(phone);
@@ -50,21 +48,18 @@ export const paymentRoutes: FastifyPluginAsync = async (fastify) => {
       if (idempotencyKey) {
         const existing = await findByIdempotencyKey(idempotencyKey);
         if (existing) {
-          return reply.code(202).send({
-            transactionId: existing.id,
-            status:        existing.status,
-          });
+          return reply.code(202).send({ transactionId: existing.id, status: existing.status });
         }
       }
 
       const tx = await createTransaction({
-        phone:     normalized,
+        phone:       normalized,
         country,
         operator,
         amount,
         currency,
         idempotencyKey,
-        webhookUrl: webhookUrl ?? `${env.WEBHOOK_BASE_URL}/webhook`,
+        webhookUrl:  webhookUrl ?? `${env.WEBHOOK_BASE_URL}/webhook`,
       });
 
       await enqueueRoutingJob({
@@ -76,15 +71,12 @@ export const paymentRoutes: FastifyPluginAsync = async (fastify) => {
         operator,
         attemptNumber:    1,
         excludeProviders: [],
-        webhookUrl:       tx.webhookUrl ?? `${env.WEBHOOK_BASE_URL}/webhook/${tx.id}`,
+        webhookUrl:       webhookUrl ?? `${env.WEBHOOK_BASE_URL}/webhook`,
       });
 
       logger.info({ transactionId: tx.id, country, operator }, 'Payment initiated');
 
-      const response: InitiatePaymentResponse = {
-        transactionId: tx.id,
-        status:        'INITIATED',
-      };
+      const response: InitiatePaymentResponse = { transactionId: tx.id, status: 'INITIATED' };
       return reply.code(202).send(response);
     },
   );
