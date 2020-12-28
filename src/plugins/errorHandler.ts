@@ -1,24 +1,33 @@
-import { FastifyInstance, FastifyError } from 'fastify';
+import { FastifyPluginAsync, FastifyError, FastifyRequest, FastifyReply } from 'fastify';
+import fp from 'fastify-plugin';
 import logger from '../config/logger';
 
-export async function errorHandlerPlugin(app: FastifyInstance) {
-  app.setErrorHandler(async (error: FastifyError, _req, reply) => {
-    const status = error.statusCode ?? 500;
-
-    if (status >= 500) {
-      logger.error({ err: error }, 'Unhandled server error');
-    } else {
-      logger.warn({ err: error }, 'Client error');
-    }
-
-    if (status === 429) {
-      return reply.status(429).send({ error: 'Too Many Requests', statusCode: 429 });
-    }
-
-    return reply.status(status).send({
-      error:      error.name || 'Error',
-      message:    status < 500 ? error.message : 'Internal server error',
-      statusCode: status,
-    });
-  });
+interface ErrorBody {
+  statusCode: number;
+  error:      string;
+  message:    string;
 }
+
+function toSafeError(err: FastifyError): ErrorBody {
+  const statusCode = err.statusCode ?? 500;
+  if (statusCode === 429) {
+    return { statusCode: 429, error: 'Too Many Requests', message: 'Rate limit exceeded' };
+  }
+  if (statusCode >= 500) {
+    logger.error({ err, statusCode }, 'Unhandled server error');
+    return { statusCode: 500, error: 'Internal Server Error', message: 'An unexpected error occurred' };
+  }
+  return { statusCode, error: err.name ?? 'Error', message: err.message };
+}
+
+const errorHandlerPlugin: FastifyPluginAsync = async (fastify) => {
+  fastify.setErrorHandler(
+    (err: FastifyError, _request: FastifyRequest, reply: FastifyReply) => {
+      const body = toSafeError(err);
+      return reply.code(body.statusCode).send(body);
+    },
+  );
+};
+
+export { errorHandlerPlugin };
+export default fp(errorHandlerPlugin, { name: 'errorHandler' });
