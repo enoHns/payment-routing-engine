@@ -1,7 +1,14 @@
-import { FastifyPluginAsync } from 'fastify';
-import { findTransactionById } from '../db/repositories/transactionRepo';
+import { FastifyPluginAsync, FastifyRequest } from 'fastify';
+import { findTransactionById, findByPhone } from '../db/repositories/transactionRepo';
 import { findAttemptsByTransactionId } from '../db/repositories/attemptRepo';
 import type { TransactionResponse, AttemptResponse } from '../types/payment';
+
+interface ListQuery {
+  phone?:  string;
+  status?: string;
+  limit?:  string;
+  offset?: string;
+}
 
 export const transactionRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get<{ Params: { id: string } }>(
@@ -38,6 +45,23 @@ export const transactionRoutes: FastifyPluginAsync = async (fastify) => {
         attempts:  attemptsResp,
       };
       return reply.code(200).send(response);
+    },
+  );
+
+  fastify.get<{ Querystring: ListQuery }>(
+    '/transactions',
+    async (request, reply) => {
+      const { phone } = request.query;
+      if (!phone) {
+        return reply.code(400).send({
+          statusCode: 400,
+          error:      'Bad Request',
+          message:    'Query parameter "phone" is required',
+        });
+      }
+
+      const results = await findByPhone(phone);
+      return reply.code(200).send({ data: results, total: results.length });
     },
   );
 };
