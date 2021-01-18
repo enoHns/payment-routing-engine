@@ -3,6 +3,7 @@ import helmet from 'fastify-helmet';
 import rateLimit from 'fastify-rate-limit';
 import { getRedisClient } from './cache/redis';
 import { errorHandlerPlugin } from './plugins/errorHandler';
+import requestIdPlugin from './plugins/requestId';
 import { healthRoutes } from './routes/health';
 import { paymentRoutes } from './routes/payment';
 import { transactionRoutes } from './routes/transactions';
@@ -22,23 +23,23 @@ export async function buildServer(): Promise<FastifyInstance> {
   });
 
   server.addHook('onRequest', (request, _reply, done) => {
-    request.requestId = request.id;
     logger.info({ method: request.method, url: request.url, requestId: request.id }, 'Incoming request');
     done();
   });
 
   server.addHook('onResponse', (request, reply, done) => {
     logger.info({
-      method:      request.method,
-      url:         request.url,
-      statusCode:  reply.statusCode,
+      method:       request.method,
+      url:          request.url,
+      statusCode:   reply.statusCode,
       responseTime: reply.getResponseTime(),
-      requestId:   request.id,
+      requestId:    request.id,
     }, 'Response sent');
     done();
   });
 
   await server.register(errorHandlerPlugin);
+  await server.register(requestIdPlugin);
   await server.register(healthRoutes);
   await server.register(paymentRoutes);
   await server.register(transactionRoutes);
