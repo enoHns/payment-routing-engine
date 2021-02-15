@@ -8,6 +8,7 @@ import { healthRoutes } from './routes/health';
 import { paymentRoutes } from './routes/payment';
 import { transactionRoutes } from './routes/transactions';
 import { webhookRoutes } from './routes/webhook';
+import { adminMetricsRoutes } from './routes/admin/metrics';
 import { env } from './config/env';
 import logger from './config/logger';
 
@@ -16,9 +17,9 @@ export async function buildServer(): Promise<FastifyInstance> {
 
   await server.register(helmet);
   await server.register(rateLimit, {
-    max:         env.RATE_LIMIT_MAX,
-    timeWindow:  env.RATE_LIMIT_WINDOW_MS,
-    redis:       getRedisClient(),
+    max:          env.RATE_LIMIT_MAX,
+    timeWindow:   env.RATE_LIMIT_WINDOW_MS,
+    redis:        getRedisClient(),
     keyGenerator: (req) => req.ip,
   });
 
@@ -40,10 +41,12 @@ export async function buildServer(): Promise<FastifyInstance> {
 
   await server.register(errorHandlerPlugin);
   await server.register(requestIdPlugin);
+
   await server.register(healthRoutes);
   await server.register(paymentRoutes);
   await server.register(transactionRoutes);
   await server.register(webhookRoutes);
+  await server.register(adminMetricsRoutes);
 
   return server;
 }
