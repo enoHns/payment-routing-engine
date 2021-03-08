@@ -1,6 +1,5 @@
 import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
-import Joi from '@hapi/joi';
-import { v4 as uuidv4 } from 'uuid';
+import { z } from 'zod';
 import { normalizePhone } from '../utils/phone';
 import { tryResolveOperator } from '../core/phoneResolver';
 import {
@@ -12,26 +11,27 @@ import { env } from '../config/env';
 import logger from '../config/logger';
 import type { InitiatePaymentBody, InitiatePaymentResponse } from '../types/payment';
 
-const bodySchema = Joi.object({
-  phone:          Joi.string().min(8).max(20).required(),
-  amount:         Joi.number().positive().required(),
-  currency:       Joi.string().length(3).uppercase().required(),
-  idempotencyKey: Joi.string().uuid().optional(),
-  webhookUrl:     Joi.string().uri().optional(),
-}).options({ allowUnknown: false, abortEarly: true });
+const paymentSchema = z.object({
+  phone:          z.string().min(8).max(20),
+  amount:         z.number().positive(),
+  currency:       z.string().length(3).transform(v => v.toUpperCase()),
+  idempotencyKey: z.string().uuid().optional(),
+  webhookUrl:     z.string().url().optional(),
+});
 
-function validationError(reply: FastifyReply, message: string) {
-  return reply.code(400).send({ statusCode: 400, error: 'Bad Request', message });
-}
+type PaymentInput = z.infer<typeof paymentSchema>;
 
 export const paymentRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{ Body: InitiatePaymentBody }>(
     '/payment',
     async (request: FastifyRequest<{ Body: InitiatePaymentBody }>, reply: FastifyReply) => {
-      const { error, value } = bodySchema.validate(request.body);
-      if (error) return validationError(reply, error.details[0].message);
+      const parsed = paymentSchema.safeParse(request.body);
+      if (!parsed.success) {
+        const message = parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ');
+        return reply.code(400).send({ statusCode: 400, error: 'Bad Request', message });
+      }
 
-      const { phone, amount, currency, idempotencyKey, webhookUrl } = value;
+      const { phone, amount, currency, idempotencyKey, webhookUrl }: PaymentInput = parsed.data;
       const normalized = normalizePhone(phone);
 
       const resolved = tryResolveOperator(normalized);
