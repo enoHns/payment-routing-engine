@@ -2,13 +2,13 @@ import { TxStatus, Transaction } from '@prisma/client';
 import { getPrismaClient } from '../prismaClient';
 
 export interface CreateTransactionData {
-  idempotencyKey:    string;
-  phone:             string;
-  amount:            number;
-  currency:          string;
-  country:           string;
-  clientCallbackUrl?: string;
-  metadata?:         Record<string, unknown>;
+  phone:            string;
+  country:          string;
+  operator?:        string;
+  amount:           number;
+  currency:         string;
+  idempotencyKey?:  string;
+  webhookUrl?:      string;
 }
 
 export async function createTransaction(data: CreateTransactionData): Promise<Transaction> {
