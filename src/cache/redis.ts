@@ -2,9 +2,9 @@ import Redis from 'ioredis';
 import { env } from '../config/env';
 import logger from '../config/logger';
 
-let client: Redis.Redis | null = null;
+let client: Redis | null = null;
 
-export function getRedisClient(): Redis.Redis {
+export function getRedisClient(): Redis {
   if (!client) {
     client = new Redis(env.REDIS_URL, {
       maxRetriesPerRequest: 3,
@@ -13,7 +13,7 @@ export function getRedisClient(): Redis.Redis {
     });
 
     client.on('connect', () => logger.info({ event: 'redis_connected' }, 'Redis connected'));
-    client.on('error', (err) => logger.error({ err, event: 'redis_error' }, 'Redis error'));
+    client.on('error', (err: Error) => logger.error({ err, event: 'redis_error' }, 'Redis error'));
     client.on('reconnecting', () => logger.warn({ event: 'redis_reconnecting' }, 'Redis reconnecting'));
   }
 
