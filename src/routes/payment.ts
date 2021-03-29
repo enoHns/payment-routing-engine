@@ -2,6 +2,7 @@ import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { normalizePhone } from '../utils/phone';
 import { tryResolveOperator } from '../core/phoneResolver';
+import { sendZodError } from '../utils/zodError';
 import {
   createTransaction,
   findByIdempotencyKey,
@@ -26,10 +27,7 @@ export const paymentRoutes: FastifyPluginAsync = async (fastify) => {
     '/payment',
     async (request: FastifyRequest<{ Body: InitiatePaymentBody }>, reply: FastifyReply) => {
       const parsed = paymentSchema.safeParse(request.body);
-      if (!parsed.success) {
-        const message = parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ');
-        return reply.code(400).send({ statusCode: 400, error: 'Bad Request', message });
-      }
+      if (!parsed.success) return sendZodError(reply, parsed.error);
 
       const { phone, amount, currency, idempotencyKey, webhookUrl }: PaymentInput = parsed.data;
       const normalized = normalizePhone(phone);
@@ -53,13 +51,13 @@ export const paymentRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       const tx = await createTransaction({
-        phone:       normalized,
+        phone:      normalized,
         country,
         operator,
         amount,
         currency,
         idempotencyKey,
-        webhookUrl:  webhookUrl ?? `${env.WEBHOOK_BASE_URL}/webhook`,
+        webhookUrl: webhookUrl ?? `${env.WEBHOOK_BASE_URL}/webhook`,
       });
 
       await enqueueRoutingJob({
