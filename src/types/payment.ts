@@ -1,5 +1,6 @@
 export interface InitiatePaymentBody {
   phone:          string;
+  country:        string;
   amount:         number;
   currency:       string;
   idempotencyKey?: string;

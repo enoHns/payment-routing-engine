@@ -14,6 +14,7 @@ import type { InitiatePaymentBody, InitiatePaymentResponse } from '../types/paym
 
 const paymentSchema = z.object({
   phone:          z.string().min(8).max(20).trim(),
+  country:        z.string().length(2).toUpperCase(),
   amount:         z.number().positive().finite(),
   currency:       z.string().length(3).toUpperCase(),
   idempotencyKey: z.string().uuid().optional(),
@@ -29,19 +30,19 @@ export const paymentRoutes: FastifyPluginAsync = async (fastify) => {
       const parsed = paymentSchema.safeParse(request.body);
       if (!parsed.success) return sendZodError(reply, parsed.error);
 
-      const { phone, amount, currency, idempotencyKey, webhookUrl }: PaymentInput = parsed.data;
-      const normalized = normalizePhone(phone);
+      const { phone, country, amount, currency, idempotencyKey, webhookUrl }: PaymentInput = parsed.data;
+      const normalized = normalizePhone(phone, country);
 
-      const resolved = tryResolveOperator(normalized);
+      const resolved = tryResolveOperator(normalized, country);
       if (!resolved) {
         return reply.code(422).send({
           statusCode: 422,
           error:      'Unprocessable Entity',
-          message:    `Cannot resolve operator for phone: ${phone}`,
+          message:    `Cannot resolve operator for phone: ${phone} in country: ${country}`,
         });
       }
 
-      const { country, operator } = resolved;
+      const { operator } = resolved;
 
       if (idempotencyKey) {
         const existing = await findByIdempotencyKey(idempotencyKey);
