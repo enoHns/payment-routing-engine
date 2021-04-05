@@ -5,8 +5,8 @@ jest.mock('../../../src/utils/phone', () => ({
   normalizePhone: jest.fn().mockReturnValue('+22997000001'),
 }));
 jest.mock('../../../src/db/repositories/transactionRepo', () => ({
-  createTransaction:      jest.fn().mockResolvedValue({ id: 'tx-1', status: 'INITIATED', webhookUrl: null }),
-  findByIdempotencyKey:   jest.fn().mockResolvedValue(null),
+  createTransaction:    jest.fn().mockResolvedValue({ id: 'tx-1', status: 'INITIATED', webhookUrl: null }),
+  findByIdempotencyKey: jest.fn().mockResolvedValue(null),
 }));
 jest.mock('../../../src/jobs/routingQueue', () => ({
   enqueueRoutingJob: jest.fn().mockResolvedValue(undefined),
@@ -19,9 +19,6 @@ jest.mock('../../../src/config/env', () => ({
     WEBHOOK_BASE_URL: 'https://example.com',
   },
 }));
-jest.mock('../../../src/cache/redis', () => ({
-  getRedisClient: jest.fn().mockReturnValue({ duplicate: jest.fn(), status: 'ready' }),
-}));
 
 import Fastify from 'fastify';
 import { paymentRoutes } from '../../../src/routes/payment';
@@ -32,40 +29,54 @@ const buildApp = async () => {
   return app;
 };
 
-describe('POST /payment', () => {
+describe('POST /payment (Zod validation)', () => {
   let app: ReturnType<typeof Fastify>;
   beforeAll(async () => { app = await buildApp(); });
   afterAll(async () => { await app.close(); });
 
-  it('returns 202 with transactionId', async () => {
+  it('returns 202 on valid request', async () => {
     const res = await app.inject({
-      method: 'POST',
-      url:    '/payment',
+      method: 'POST', url: '/payment',
       payload: { phone: '+22997000001', amount: 5000, currency: 'XOF' },
     });
     expect(res.statusCode).toBe(202);
-    const body = JSON.parse(res.body);
-    expect(body.transactionId).toBe('tx-1');
-    expect(body.status).toBe('INITIATED');
+    expect(JSON.parse(res.body).status).toBe('INITIATED');
   });
 
   it('returns 400 on missing amount', async () => {
     const res = await app.inject({
-      method: 'POST',
-      url:    '/payment',
+      method: 'POST', url: '/payment',
       payload: { phone: '+22997000001', currency: 'XOF' },
     });
     expect(res.statusCode).toBe(400);
   });
 
-  it('returns 422 when operator unresolvable', async () => {
+  it('returns 400 on negative amount', async () => {
+    const res = await app.inject({
+      method: 'POST', url: '/payment',
+      payload: { phone: '+22997000001', amount: -100, currency: 'XOF' },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('returns 422 when operator not resolved', async () => {
     const { tryResolveOperator } = jest.requireMock('../../../src/core/phoneResolver') as any;
     tryResolveOperator.mockReturnValueOnce(null);
     const res = await app.inject({
-      method: 'POST',
-      url:    '/payment',
-      payload: { phone: '+333000000', amount: 1000, currency: 'EUR' },
+      method: 'POST', url: '/payment',
+      payload: { phone: '+33600000000', amount: 1000, currency: 'EUR' },
     });
     expect(res.statusCode).toBe(422);
+  });
+
+  it('returns 202 on existing idempotencyKey', async () => {
+    const { findByIdempotencyKey } = jest.requireMock('../../../src/db/repositories/transactionRepo') as any;
+    findByIdempotencyKey.mockResolvedValueOnce({ id: 'tx-existing', status: 'PROCESSING' });
+    const res = await app.inject({
+      method: 'POST', url: '/payment',
+      payload: { phone: '+22997000001', amount: 5000, currency: 'XOF', idempotencyKey: '550e8400-e29b-41d4-a716-446655440000' },
+    });
+    expect(res.statusCode).toBe(202);
+    expect(JSON.parse(res.body).transactionId).toBe('tx-existing');
   });
 });
