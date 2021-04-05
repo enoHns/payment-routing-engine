@@ -11,7 +11,7 @@ export interface OperatorDef {
 
 export interface CountryDef {
   name: string;
-  currency: string;
+  callingCode: string;
   operators: OperatorDef[];
 }
 
