@@ -37,7 +37,7 @@ export const transactionRoutes: FastifyPluginAsync = async (fastify) => {
         phone:     tx.phone,
         country:   tx.country,
         operator:  tx.operator ?? '',
-        amount:    tx.amount,
+        amount:    tx.amount.toNumber(),
         currency:  tx.currency,
         status:    tx.status,
         createdAt: tx.createdAt.toISOString(),
