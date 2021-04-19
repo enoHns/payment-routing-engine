@@ -1,31 +1,44 @@
-import { AttemptStatus, Attempt } from '@prisma/client';
-import { getPrismaClient } from '../prismaClient';
+import { prisma } from '../prismaClient';
+import { AttemptStatus } from '@prisma/client';
 
-export interface CreateAttemptData {
+interface CreateAttemptData {
   transactionId: string;
   providerName:  string;
-  score:         number;
+  score?:        number;
 }
 
-export async function createAttempt(data: CreateAttemptData): Promise<Attempt> {
-  return getPrismaClient().attempt.create({ data });
+interface UpdateAttemptData {
+  status?:         AttemptStatus;
+  providerTxId?:   string;
+  latencyMs?:      number;
+  errorCode?:      string;
+  errorMessage?:   string;
+  resolvedAt?:     Date;
+  webhookPayload?: Record<string, unknown>;
 }
 
-export async function updateAttempt(
-  id: string,
-  data: Partial<Pick<Attempt, 'status' | 'providerTxId' | 'latencyMs' | 'errorCode' | 'errorMessage' | 'webhookPayload' | 'resolvedAt'>>,
-): Promise<void> {
-  await getPrismaClient().attempt.update({ where: { id }, data });
+export async function createAttempt(data: CreateAttemptData) {
+  return prisma.attempt.create({ data });
 }
 
-export async function findAttemptByProviderTxId(providerTxId: string): Promise<Attempt | null> {
-  return getPrismaClient().attempt.findFirst({ where: { providerTxId } });
+export async function updateAttempt(id: string, data: UpdateAttemptData) {
+  return prisma.attempt.update({ where: { id }, data });
 }
 
-export async function findAttemptsByTransactionId(transactionId: string): Promise<Attempt[]> {
-  return getPrismaClient().attempt.findMany({ where: { transactionId }, orderBy: { createdAt: 'asc' } });
+export async function findAttemptByProviderTxId(providerTxId: string) {
+  return prisma.attempt.findFirst({ where: { providerTxId } });
 }
+
+export async function findByTransactionId(transactionId: string) {
+  return prisma.attempt.findMany({
+    where:   { transactionId },
+    orderBy: { createdAt: 'asc' },
+  });
+}
+
+/** Alias used by route handlers */
+export const findAttemptsByTransactionId = findByTransactionId;
 
 export async function countAttempts(transactionId: string): Promise<number> {
-  return getPrismaClient().attempt.count({ where: { transactionId } });
+  return prisma.attempt.count({ where: { transactionId } });
 }
