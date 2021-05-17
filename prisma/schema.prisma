@@ -1,38 +1,14 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
-}
-
-model Transaction {
-  id                String      @id @default(uuid())
-  idempotencyKey    String      @unique
-  phone             String
-  amount            Int
-  currency          String      @default("XOF")
-  country           String
-  operator          String?
-  status            TxStatus    @default(INITIATED)
-  clientCallbackUrl String?
-  metadata          Json?
-  settledAt         DateTime?
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
-  attempts          Attempt[]
-  auditLogs         AuditLog[]
-
-  @@index([phone])
-  @@index([status])
-  @@index([createdAt])
-  @@map("transactions")
-}
-
 enum TxStatus {
   INITIATED
-  OPERATOR_DETECTED
   PROVIDER_SELECTED
   PROCESSING
   SUCCESS
@@ -40,31 +16,55 @@ enum TxStatus {
   REFUNDED
 }
 
-model Attempt {
-  id             String        @id @default(uuid())
-  transactionId  String
-  providerName   String
-  providerTxId   String?
-  status         AttemptStatus @default(PENDING)
-  score          Float
-  latencyMs      Int?
-  errorCode      String?
-  errorMessage   String?
-  webhookPayload Json?
-  createdAt      DateTime      @default(now())
-  resolvedAt     DateTime?
-  transaction    Transaction   @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-
-  @@index([transactionId])
-  @@index([providerName, status])
-  @@map("attempts")
-}
-
 enum AttemptStatus {
   PENDING
   SUCCESS
   FAILED
-  TIMEOUT
+}
+
+model Transaction {
+  id             String    @id @default(uuid())
+  phone          String
+  country        String
+  operator       String?
+  amount         Decimal   @db.Decimal(18, 2)
+  currency       String    @db.Char(3)
+  status         TxStatus  @default(INITIATED)
+  idempotencyKey String?   @unique
+  webhookUrl     String?
+  settledAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  attempts       Attempt[]
+  auditLogs      AuditLog[]
+
+  @@index([phone])
+  @@index([status])
+  @@index([idempotencyKey])
+  @@map("transactions")
+}
+
+model Attempt {
+  id             String        @id @default(uuid())
+  transactionId  String
+  providerName   String
+  status         AttemptStatus @default(PENDING)
+  score          Float?
+  providerTxId   String?
+  latencyMs      Int?
+  errorCode      String?
+  errorMessage   String?
+  webhookPayload Json?
+  resolvedAt     DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  transaction    Transaction   @relation(fields: [transactionId], references: [id])
+
+  @@index([transactionId])
+  @@index([providerTxId])
+  @@map("attempts")
 }
 
 model ProviderMetric {
@@ -77,7 +77,6 @@ model ProviderMetric {
   failureCount   Int      @default(0)
   totalLatencyMs BigInt   @default(0)
   sampleCount    Int      @default(0)
-  score          Float    @default(0.5)
   updatedAt      DateTime @updatedAt
 
   @@unique([providerName, operator, country, windowStart])
@@ -86,12 +85,13 @@ model ProviderMetric {
 }
 
 model AuditLog {
-  id            String      @id @default(uuid())
+  id            String   @id @default(uuid())
   transactionId String
   event         String
   payload       Json?
-  createdAt     DateTime    @default(now())
-  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
 
   @@index([transactionId])
   @@map("audit_logs")
