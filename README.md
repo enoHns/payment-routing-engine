@@ -1,14 +1,15 @@
 # payment-routing-engine
 
-Server-side payment routing engine for West Africa mobile money.
+West Africa mobile money payment routing engine.
 
 ## Stack
 
-- **Runtime**: Node.js 12, TypeScript 4.0
+- **Runtime**: Node.js 12, TypeScript 4.3
 - **Framework**: Fastify 3
 - **ORM**: Prisma 2 + PostgreSQL 11
 - **Queue**: BullMQ 1 + Redis 5
-- **Tests**: Jest 26
+- **Validation**: Zod 3
+- **Tests**: Jest 27
 
 ## Quick start
 
@@ -20,13 +21,42 @@ npx prisma migrate dev
 npm run dev
 ```
 
-## Routing pipeline
+## API
+
+| Method | Path                   | Description                          |
+|--------|------------------------|--------------------------------------|
+| GET    | /health                | Liveness + readiness                 |
+| POST   | /payment               | Initiate a mobile money payment      |
+| GET    | /transactions/:id      | Get transaction with attempts        |
+| GET    | /transactions?phone=   | List transactions for a phone number |
+| POST   | /webhook/:provider     | Receive provider payment callback    |
+| GET    | /admin/metrics         | Provider scores summary              |
+
+### POST /payment
+
+```json
+{
+  "phone": "+22997000001",
+  "amount": 5000,
+  "currency": "XOF",
+  "idempotencyKey": "uuid-optional",
+  "webhookUrl": "https://your-app.com/payment-callback"
+}
+```
+
+Response `202`:
+```json
+{ "transactionId": "uuid", "status": "INITIATED" }
+```
+
+### Routing pipeline
 
 ```
 POST /payment
+  → Zod validate
   → phone resolver   (operator detection from prefix)
-  → eligibility      (getEligibleProviders by country/operator)
-  → scoring          (success rate + latency + priority — 24h window)
+  → idempotency check (findByIdempotencyKey)
+  → createTransaction (status=INITIATED)
   → BullMQ job       (enqueueRoutingJob)
 
 Worker picks up job:
@@ -35,29 +65,27 @@ Worker picks up job:
   → on retryable error → enqueue next provider
 
 POST /webhook/:provider
-  → verifyWebhook signature (HMAC or IP whitelist)
+  → adapter.verifyWebhook (HMAC or IP whitelist)
   → resolve attempt
   → update transaction status
   → recordAttemptOutcome → invalidate score cache
 ```
 
-## Scoring formula
+### Scoring formula
 
 ```
 score = 0.5 × successRate + 0.3 × latencyScore + 0.2 × priorityScore
 ```
 
-- **successRate**: success / (success + failure) over last 24h windows
-- **latencyScore**: 1 - avgLatency / 5000ms, clamped to [0,1]
-- **priorityScore**: normalized inverse of provider priority
-- Cold start: each component defaults to 0.5
+All components in [0, 1]. Cold start defaults to 0.5 per component.
+Scores are cached in Redis with a 5-minute TTL and invalidated on each webhook.
 
-## API
+### Supported countries & operators
 
-| Method | Path    | Description          |
-|--------|---------|----------------------|
-| GET    | /health | Liveness + readiness |
-
----
-
-*Work in progress — API routes and webhook endpoint coming next.*
+| Country      | Code | Operators              |
+|--------------|------|------------------------|
+| Bénin        | BJ   | MTN, Moov, Celtiis     |
+| Côte d'Ivoire| CI   | Orange, MTN, Moov      |
+| Sénégal      | SN   | Orange, Free, Wave     |
+| Togo         | TG   | Togocel, Moov          |
+| Niger        | NE   | Airtel, Moov           |
