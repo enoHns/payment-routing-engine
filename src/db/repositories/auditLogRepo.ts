@@ -8,7 +8,7 @@ export interface CreateAuditLogData {
 }
 
 export async function createAuditLog(data: CreateAuditLogData): Promise<AuditLog> {
-  return getPrismaClient().auditLog.create({ data });
+  return getPrismaClient().auditLog.create({ data: data as any });
 }
 
 export async function findAuditLogsByTransactionId(transactionId: string): Promise<AuditLog[]> {

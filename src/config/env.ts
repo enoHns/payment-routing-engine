@@ -8,30 +8,43 @@ const envSchema = z.object({
   PORT:                     z.coerce.number().default(3000),
   LOG_LEVEL:                z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   WEBHOOK_BASE_URL:         z.string().url(),
-  KKIAPAY_PRIVATE_KEY:      z.string(),
-  KKIAPAY_PUBLIC_KEY:       z.string(),
-  KKIAPAY_HMAC_KEY:         z.string(),
+
+  // ── KKiaPay (required — primary provider) ──────────────────────────────
+  KKIAPAY_PRIVATE_KEY:      z.string().min(1),
+  KKIAPAY_PUBLIC_KEY:       z.string().min(1),
+  // HMAC key used to verify incoming KKiaPay webhooks (= KKIAPAY_WEBHOOK_SECRET in their dashboard)
+  KKIAPAY_HMAC_KEY:         z.string().min(1),
   KKIAPAY_BASE_URL:         z.string().url().default('https://api.kkiapay.me'),
   KKIAPAY_TIMEOUT_MS:       z.coerce.number().default(30000),
-  FEDAPAY_SECRET_KEY:       z.string(),
+
+  // ── FedaPay (optional) ─────────────────────────────────────────────────
+  FEDAPAY_PRIVATE_KEY:      z.string().default(''),   // renamed from FEDAPAY_SECRET_KEY
   FEDAPAY_BASE_URL:         z.string().url().default('https://api.fedapay.com'),
-  CINETPAY_API_KEY:         z.string(),
-  CINETPAY_SITE_ID:         z.string(),
+
+  // ── CinetPay (optional) ────────────────────────────────────────────────
+  CINETPAY_API_KEY:         z.string().default(''),
+  CINETPAY_SITE_ID:         z.string().default(''),
   CINETPAY_BASE_URL:        z.string().url().default('https://api-checkout.cinetpay.com'),
-  FEEXPAY_API_KEY:          z.string(),
-  FEEXPAY_SHOP_ID:          z.string(),
-  FEEXPAY_HMAC_SECRET:      z.string(),
+
+  // ── FeexPay (optional) ─────────────────────────────────────────────────
+  FEEXPAY_API_KEY:          z.string().default(''),
+  FEEXPAY_SHOP_ID:          z.string().default(''),
+  FEEXPAY_HMAC_SECRET:      z.string().default(''),
   FEEXPAY_BASE_URL:         z.string().url().default('https://api.feexpay.me'),
-  PAYDUNYA_MASTER_KEY:      z.string(),
-  PAYDUNYA_PRIVATE_KEY:     z.string(),
-  PAYDUNYA_TOKEN:           z.string(),
+
+  // ── PayDunya (optional) ────────────────────────────────────────────────
+  PAYDUNYA_MASTER_KEY:      z.string().default(''),
+  PAYDUNYA_PRIVATE_KEY:     z.string().default(''),
+  PAYDUNYA_TOKEN:           z.string().default(''),
   PAYDUNYA_BASE_URL:        z.string().url().default('https://app.paydunya.com/api'),
+
   RATE_LIMIT_MAX:           z.coerce.number().default(100),
   RATE_LIMIT_WINDOW_MS:     z.coerce.number().default(60000),
   MAX_FALLBACK_ATTEMPTS:    z.coerce.number().default(3),
   // Optional: when set, GET /admin/metrics requires x-api-key header
   ADMIN_API_KEY:            z.string().optional(),
-}).strict();
+});
+// Note: no .strict() — process.env contains many OS variables that are not part of the schema
 
 const parsed = envSchema.safeParse(process.env);
 if (!parsed.success) {

@@ -22,7 +22,7 @@ export async function createAttempt(data: CreateAttemptData) {
 }
 
 export async function updateAttempt(id: string, data: UpdateAttemptData) {
-  return prisma.attempt.update({ where: { id }, data });
+  return prisma.attempt.update({ where: { id }, data: data as any });
 }
 
 export async function findAttemptByProviderTxId(providerTxId: string) {
