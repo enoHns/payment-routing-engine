@@ -101,3 +101,16 @@ export function createRoutingWorker() {
     { connection: redisOptions, concurrency: CONCURRENCY },
   );
 }
+
+let activeWorker: ReturnType<typeof createRoutingWorker> | null = null;
+
+export function startRoutingWorker(): void {
+  activeWorker = createRoutingWorker();
+}
+
+export async function stopRoutingWorker(): Promise<void> {
+  if (activeWorker) {
+    await activeWorker.close();
+    activeWorker = null;
+  }
+}
