@@ -45,7 +45,7 @@ describe('payment Zod schema', () => {
   });
 
   it('allows optional idempotencyKey and webhookUrl to be absent', () => {
-    const r = paymentSchema.safeParse({ phone: '+22997000001', amount: 100, currency: 'XOF' });
+    const r = paymentSchema.safeParse({ phone: '+22997000001', country: 'BJ', amount: 100, currency: 'XOF' });
     expect(r.success).toBe(true);
     if (r.success) {
       expect(r.data.idempotencyKey).toBeUndefined();

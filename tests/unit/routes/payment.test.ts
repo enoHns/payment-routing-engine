@@ -6,7 +6,7 @@ vi.mock('../../../src/core/phoneResolver', () => ({
 vi.mock('../../../src/utils/phone', () => ({
   normalizePhone: vi.fn().mockReturnValue('+22997000001'),
 }));
-vi.mock('../../../src/db/repositories/transactionRepo', () => ({
+vi.mock('../../../src/db/repositories', () => ({
   createTransaction:    vi.fn().mockResolvedValue({ id: 'tx-1', status: 'INITIATED', webhookUrl: null }),
   findByIdempotencyKey: vi.fn().mockResolvedValue(null),
 }));
@@ -25,7 +25,7 @@ vi.mock('../../../src/config/env', () => ({
 import Fastify from 'fastify';
 import { paymentRoutes } from '../../../src/routes/payment';
 import { tryResolveOperator } from '../../../src/core/phoneResolver';
-import { findByIdempotencyKey } from '../../../src/db/repositories/transactionRepo';
+import { findByIdempotencyKey } from '../../../src/db/repositories';
 
 const buildApp = async () => {
   const app = Fastify();
@@ -41,7 +41,7 @@ describe('POST /payment (Zod validation)', () => {
   it('returns 202 on valid request', async () => {
     const res = await app.inject({
       method: 'POST', url: '/payment',
-      payload: { phone: '+22997000001', amount: 5000, currency: 'XOF' },
+      payload: { phone: '+22997000001', country: 'BJ', amount: 5000, currency: 'XOF' },
     });
     expect(res.statusCode).toBe(202);
     expect(JSON.parse(res.body).status).toBe('INITIATED');
@@ -67,7 +67,7 @@ describe('POST /payment (Zod validation)', () => {
     vi.mocked(tryResolveOperator).mockReturnValueOnce(null);
     const res = await app.inject({
       method: 'POST', url: '/payment',
-      payload: { phone: '+33600000000', amount: 1000, currency: 'EUR' },
+      payload: { phone: '+33600000000', country: 'FR', amount: 1000, currency: 'EUR' },
     });
     expect(res.statusCode).toBe(422);
   });
@@ -76,7 +76,7 @@ describe('POST /payment (Zod validation)', () => {
     vi.mocked(findByIdempotencyKey).mockResolvedValueOnce({ id: 'tx-existing', status: 'PROCESSING' } as any);
     const res = await app.inject({
       method: 'POST', url: '/payment',
-      payload: { phone: '+22997000001', amount: 5000, currency: 'XOF', idempotencyKey: '550e8400-e29b-41d4-a716-446655440000' },
+      payload: { phone: '+22997000001', country: 'BJ', amount: 5000, currency: 'XOF', idempotencyKey: '550e8400-e29b-41d4-a716-446655440000' },
     });
     expect(res.statusCode).toBe(202);
     expect(JSON.parse(res.body).transactionId).toBe('tx-existing');

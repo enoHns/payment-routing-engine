@@ -44,6 +44,6 @@ describe('computeProviderScore', () => {
     const s = computeProviderScore(
       { successCount: 0, failureCount: 0, totalLatencyMs: 0, sampleCount: 0 }, 1, 1, DEFAULT_WEIGHTS,
     );
-    expect(s).toBeCloseTo(0.5, 1);
+    expect(s).toBeCloseTo(0.6, 1);
   });
 });
