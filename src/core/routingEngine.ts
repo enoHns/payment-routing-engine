@@ -1,67 +1,47 @@
-import { getEligibleProviders, ProviderConfig } from './providerRegistry';
-import { aggregateProviderStats } from './metricsAggregator';
+import { getEligibleProviders } from './providerRegistry';
+import { getRecentProviderStats } from './metricsAggregator';
 import { computeProviderScore, DEFAULT_WEIGHTS } from './scoringEngine';
 import { getCachedScore, setCachedScore } from './scoreCache';
 import logger from '../config/logger';
 
 export interface ScoredProvider {
-  provider: ProviderConfig;
-  score:    number;
-}
-
-async function getProviderScore(
-  provider: ProviderConfig,
-  operator: string,
-  country: string,
-): Promise<number> {
-  // Try cache first
-  const cached = await getCachedScore(provider.name, operator, country);
-  if (cached !== null) {
-    logger.debug({ provider: provider.name, score: cached }, 'Score from cache');
-    return cached;
-  }
-
-  // Compute from DB metrics
-  const stats = await aggregateProviderStats(provider.name, operator, country);
-  const allProviders = getEligibleProviders(country, operator);
-  const maxPriority  = Math.max(...allProviders.map(p => p.priority), 1);
-  const score = computeProviderScore(stats, provider.priority, maxPriority, DEFAULT_WEIGHTS);
-
-  // Cache result
-  await setCachedScore(provider.name, operator, country, score);
-
-  logger.debug({ provider: provider.name, operator, country, score }, 'Score computed');
-  return score;
+  provider:    ReturnType<typeof getEligibleProviders>[number];
+  score:       number;
+  fromCache:   boolean;
 }
 
 export async function rankProviders(
   operator: string,
-  country: string,
+  country:  string,
 ): Promise<ScoredProvider[]> {
   const eligible = getEligibleProviders(country, operator);
-  if (eligible.length === 0) {
-    throw new Error(`No eligible providers for ${operator}/${country}`);
-  }
+  if (eligible.length === 0) return [];
+
+  const maxPriority = Math.max(...eligible.map(p => p.priority));
 
   const scored = await Promise.all(
-    eligible.map(async provider => ({
-      provider,
-      score: await getProviderScore(provider, operator, country),
-    })),
+    eligible.map(async (provider): Promise<ScoredProvider> => {
+      const cached = await getCachedScore(provider.name, operator, country);
+      if (cached !== null) {
+        return { provider, score: cached, fromCache: true };
+      }
+      const stats = await getRecentProviderStats(provider.name, operator, country);
+      const score = computeProviderScore(stats, provider.priority, maxPriority, DEFAULT_WEIGHTS);
+      await setCachedScore(provider.name, operator, country, score);
+      return { provider, score, fromCache: false };
+    }),
   );
 
-  return scored.sort((a, b) => b.score - a.score);
+  scored.sort((a, b) => {
+    const diff = b.score - a.score;
+    if (Math.abs(diff) > 1e-9) return diff;
+    return a.provider.priority - b.provider.priority;
+  });
+
+  logger.debug({ operator, country, ranked: scored.map(s => ({ name: s.provider.name, score: s.score })) }, 'Providers ranked');
+  return scored;
 }
 
-export async function selectBestProvider(
-  operator: string,
-  country: string,
-): Promise<ScoredProvider> {
-  const ranked = await rankProviders(operator, country);
-  const best   = ranked[0];
-  logger.info(
-    { provider: best.provider.name, score: best.score, operator, country },
-    'Provider selected',
-  );
-  return best;
+export function selectBestProvider(ranked: ScoredProvider[]): ScoredProvider | null {
+  return ranked.length > 0 ? ranked[0] : null;
 }
