@@ -7,11 +7,10 @@ function maskPhone(phone: string): string {
   return `+***${last4}`;
 }
 
-const logger = pino({
+// pino 8 removed the prettyPrint option — use transport instead for dev formatting
+// TODO: consider switching staging to JSON too for easier log aggregation
+const pinoOptions: pino.LoggerOptions = {
   level: process.env.LOG_LEVEL || 'info',
-  prettyPrint: process.env.NODE_ENV !== 'production'
-    ? { colorize: true, translateTime: 'SYS:standard' }
-    : false,
   base: {
     service: 'routing-engine',
     pid: process.pid,
@@ -21,7 +20,16 @@ const logger = pino({
     err: pino.stdSerializers.err,
   },
   timestamp: pino.stdTimeFunctions.isoTime,
-});
+};
+
+if (process.env.NODE_ENV !== 'production') {
+  pinoOptions.transport = {
+    target: 'pino-pretty',
+    options: { colorize: true, translateTime: 'SYS:standard', ignore: 'pid,hostname' },
+  };
+}
+
+const logger = pino(pinoOptions);
 
 export default logger;
 export { logger };
