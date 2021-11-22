@@ -20,6 +20,15 @@ if (process.env.NODE_ENV !== 'production') {
 prisma.$on('warn',  (e) => logger.warn({ message: e.message },  'Prisma warning'));
 prisma.$on('error', (e) => logger.error({ message: e.message }, 'Prisma error'));
 
+/**
+ * Returns the shared Prisma singleton.
+ * Using a function here (instead of direct export) makes it easy to swap the
+ * instance in unit tests via vi.mock('../db/prismaClient', () => ({ getPrismaClient: () => mockPrisma })).
+ */
+export function getPrismaClient(): PrismaClient {
+  return prisma;
+}
+
 const MAX_RETRIES = 5;
 const RETRY_DELAY = 3000;
 
