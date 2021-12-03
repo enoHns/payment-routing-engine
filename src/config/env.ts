@@ -12,6 +12,7 @@ const envSchema = z.object({
   KKIAPAY_PUBLIC_KEY:       z.string(),
   KKIAPAY_HMAC_KEY:         z.string(),
   KKIAPAY_BASE_URL:         z.string().url().default('https://api.kkiapay.me'),
+  KKIAPAY_TIMEOUT_MS:       z.coerce.number().default(30000),
   FEDAPAY_SECRET_KEY:       z.string(),
   FEDAPAY_BASE_URL:         z.string().url().default('https://api.fedapay.com'),
   CINETPAY_API_KEY:         z.string(),
@@ -23,11 +24,12 @@ const envSchema = z.object({
   FEEXPAY_BASE_URL:         z.string().url().default('https://api.feexpay.me'),
   PAYDUNYA_MASTER_KEY:      z.string(),
   PAYDUNYA_PRIVATE_KEY:     z.string(),
+  PAYDUNYA_TOKEN:           z.string(),
   PAYDUNYA_BASE_URL:        z.string().url().default('https://app.paydunya.com/api'),
   RATE_LIMIT_MAX:           z.coerce.number().default(100),
   RATE_LIMIT_WINDOW_MS:     z.coerce.number().default(60000),
   MAX_FALLBACK_ATTEMPTS:    z.coerce.number().default(3),
-});
+}).strict();
 
 const parsed = envSchema.safeParse(process.env);
 if (!parsed.success) {
