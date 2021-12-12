@@ -10,14 +10,19 @@ const COUNTRY_FROM_CODE: Record<string, string> = Object.fromEntries(
 
 /**
  * Normalize to E.164 format (+<calling_code><number>).
- * Already in E.164: returned as-is.
- * Starts with 00: 00 → +
- * Otherwise: assumed local (no prefix); kept unchanged (caller should add calling code).
+ * - Already in E.164 (+...): returned as-is.
+ * - Starts with 00: 00 replaced by +.
+ * - If country is provided and phone looks local (no prefix): calling code prepended.
+ * - Otherwise: returned as-is (caller responsible for further normalisation).
  */
-export function normalizePhone(phone: string): string {
+export function normalizePhone(phone: string, country?: string): string {
   const stripped = phone.replace(/[\s\-().]/g, '');
   if (stripped.startsWith('+')) return stripped;
   if (stripped.startsWith('00')) return '+' + stripped.slice(2);
+  if (country) {
+    const callingCode = getCallingCode(country);
+    if (callingCode) return `+${callingCode}${stripped}`;
+  }
   return stripped;
 }
 
