@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 const paymentSchema = z.object({
   phone:          z.string().min(8).max(20),
+  country:        z.string().length(2),
   amount:         z.number().positive(),
   currency:       z.string().length(3),
   idempotencyKey: z.string().uuid().optional(),
@@ -10,22 +11,22 @@ const paymentSchema = z.object({
 
 describe('payment Zod schema', () => {
   it('accepts valid payload', () => {
-    const r = paymentSchema.safeParse({ phone: '+22997000001', amount: 5000, currency: 'XOF' });
+    const r = paymentSchema.safeParse({ phone: '+22997000001', country: 'BJ', amount: 5000, currency: 'XOF' });
     expect(r.success).toBe(true);
   });
 
   it('rejects missing amount', () => {
-    const r = paymentSchema.safeParse({ phone: '+22997000001', currency: 'XOF' });
+    const r = paymentSchema.safeParse({ phone: '+22997000001', country: 'BJ', currency: 'XOF' });
     expect(r.success).toBe(false);
   });
 
   it('rejects negative amount', () => {
-    const r = paymentSchema.safeParse({ phone: '+22997000001', amount: -1, currency: 'XOF' });
+    const r = paymentSchema.safeParse({ phone: '+22997000001', country: 'BJ', amount: -1, currency: 'XOF' });
     expect(r.success).toBe(false);
   });
 
   it('rejects phone too short', () => {
-    const r = paymentSchema.safeParse({ phone: '123', amount: 100, currency: 'XOF' });
+    const r = paymentSchema.safeParse({ phone: '123', country: 'BJ', amount: 100, currency: 'XOF' });
     expect(r.success).toBe(false);
   });
 

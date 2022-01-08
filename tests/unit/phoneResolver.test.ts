@@ -1,38 +1,40 @@
 import { resolveOperator, normalizePhone } from '../../src/core/phoneResolver';
 
 describe('phoneResolver — Bénin', () => {
-  it('resolves MTN prefix 96', () => {
-    expect(resolveOperator('96123456', 'BJ').operator).toBe('MTN');
+  it('resolves MTN prefix 961', () => {
+    expect(resolveOperator('96100001', 'BJ').operator).toBe('MTN');
   });
 
-  it('resolves MTN prefix 97', () => {
-    expect(resolveOperator('97456789', 'BJ').operator).toBe('MTN');
+  it('resolves MTN prefix 967', () => {
+    expect(resolveOperator('96700001', 'BJ').operator).toBe('MTN');
   });
 
-  it('resolves Moov prefix 98', () => {
-    expect(resolveOperator('98001234', 'BJ').operator).toBe('Moov');
+  it('resolves Moov prefix 994', () => {
+    expect(resolveOperator('99400001', 'BJ').operator).toBe('Moov');
   });
 
-  it('resolves Moov prefix 64', () => {
-    expect(resolveOperator('64112233', 'BJ').operator).toBe('Moov');
+  it('resolves Moov prefix 998', () => {
+    expect(resolveOperator('99800001', 'BJ').operator).toBe('Moov');
   });
 
-  it('resolves Celtiis prefix 68', () => {
-    expect(resolveOperator('68001122', 'BJ').operator).toBe('Celtiis');
+  it('resolves Celtiis prefix 910', () => {
+    expect(resolveOperator('91000001', 'BJ').operator).toBe('Celtiis');
   });
 
-  it('strips country code +229', () => {
-    const result = resolveOperator('+22996123456', 'BJ');
+  it('normalizes local number to E.164', () => {
+    const result = resolveOperator('96700001', 'BJ');
     expect(result.operator).toBe('MTN');
-    expect(result.normalized).toBe('96123456');
+    expect(result.normalized).toBe('+22996700001');
   });
 
-  it('strips country code without +', () => {
-    expect(resolveOperator('22997001122', 'BJ').normalized).toBe('97001122');
+  it('accepts E.164 input (+229...)', () => {
+    const result = resolveOperator('+22996700001', 'BJ');
+    expect(result.operator).toBe('MTN');
+    expect(result.normalized).toBe('+22996700001');
   });
 
   it('strips spaces from phone', () => {
-    expect(resolveOperator('96 12 34 56', 'BJ').operator).toBe('MTN');
+    expect(resolveOperator('96 70 00 01', 'BJ').operator).toBe('MTN');
   });
 
   it('throws for unknown prefix in known country', () => {
@@ -40,37 +42,37 @@ describe('phoneResolver — Bénin', () => {
   });
 
   it('throws for unsupported country', () => {
-    expect(() => resolveOperator('96123456', 'XX')).toThrow('Unsupported country');
+    expect(() => resolveOperator('96700001', 'XX')).toThrow('Unsupported country');
   });
 });
 
 describe('phoneResolver — Côte d\'Ivoire', () => {
-  it('resolves Orange CI prefix 07', () => {
+  it('resolves Orange CI prefix 225 07', () => {
     expect(resolveOperator('0712345678', 'CI').operator).toBe('Orange');
   });
 
-  it('resolves MTN CI prefix 05', () => {
+  it('resolves MTN CI prefix 225 05', () => {
     expect(resolveOperator('0512345678', 'CI').operator).toBe('MTN');
   });
 
-  it('resolves Moov CI prefix 01', () => {
+  it('resolves Moov CI prefix 225 01', () => {
     expect(resolveOperator('0112345678', 'CI').operator).toBe('Moov');
   });
 
-  it('strips CI country code +225', () => {
+  it('accepts E.164 CI input (+2250712345678)', () => {
     const result = resolveOperator('+2250712345678', 'CI');
     expect(result.operator).toBe('Orange');
-    expect(result.normalized).toBe('0712345678');
+    expect(result.normalized).toBe('+2250712345678');
   });
 });
 
 describe('normalizePhone', () => {
-  it('removes dashes', () => {
-    expect(normalizePhone('96-12-34-56', 'BJ')).toBe('96123456');
+  it('strips separators, returns E.164 with country', () => {
+    expect(normalizePhone('96-70-00-01', 'BJ')).toBe('+22996700001');
   });
 
-  it('removes dots', () => {
-    expect(normalizePhone('96.12.34.56', 'BJ')).toBe('96123456');
+  it('strips dots, returns E.164 with country', () => {
+    expect(normalizePhone('96.70.00.01', 'BJ')).toBe('+22996700001');
   });
 });
 

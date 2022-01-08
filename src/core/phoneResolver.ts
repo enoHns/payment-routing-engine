@@ -25,10 +25,12 @@ export function resolveOperator(phone: string, country: string): ResolveResult {
   if (!countryDef) throw new Error(`Unsupported country: ${country}`);
 
   const normalized = normalizePhone(phone, country);
+  // Prefix matching uses digits only (no leading '+')
+  const forMatch = normalized.startsWith('+') ? normalized.slice(1) : normalized;
   const candidates = buildCandidates(countryDef.operators);
 
   for (const { operator, prefix } of candidates) {
-    if (normalized.startsWith(prefix)) {
+    if (forMatch.startsWith(prefix)) {
       logger.debug({ normalized, operator, country }, 'Operator resolved');
       return { operator, country, normalized };
     }

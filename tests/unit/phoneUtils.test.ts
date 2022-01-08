@@ -1,32 +1,32 @@
 import { normalizePhone, getCallingCode } from '../../src/utils/phone';
 
 describe('normalizePhone', () => {
-  it('strips leading + and country code', () => {
-    expect(normalizePhone('+22996123456', 'BJ')).toBe('96123456');
+  it('returns E.164 unchanged if already in E.164 format', () => {
+    expect(normalizePhone('+22996700001', 'BJ')).toBe('+22996700001');
   });
 
-  it('strips country code without +', () => {
-    expect(normalizePhone('22997001122', 'BJ')).toBe('97001122');
+  it('converts local number to E.164 when country provided', () => {
+    expect(normalizePhone('96700001', 'BJ')).toBe('+22996700001');
   });
 
-  it('removes spaces', () => {
-    expect(normalizePhone('96 12 34 56', 'BJ')).toBe('96123456');
+  it('removes spaces before converting to E.164', () => {
+    expect(normalizePhone('96 70 00 01', 'BJ')).toBe('+22996700001');
   });
 
-  it('removes dashes', () => {
-    expect(normalizePhone('96-12-34-56', 'BJ')).toBe('96123456');
+  it('removes dashes before converting to E.164', () => {
+    expect(normalizePhone('96-70-00-01', 'BJ')).toBe('+22996700001');
   });
 
-  it('removes dots', () => {
-    expect(normalizePhone('96.12.34.56', 'BJ')).toBe('96123456');
+  it('removes dots before converting to E.164', () => {
+    expect(normalizePhone('96.70.00.01', 'BJ')).toBe('+22996700001');
   });
 
   it('handles CI country code', () => {
-    expect(normalizePhone('+2250712345678', 'CI')).toBe('0712345678');
+    expect(normalizePhone('0712345678', 'CI')).toBe('+2250712345678');
   });
 
-  it('does not strip if no country code present', () => {
-    expect(normalizePhone('96123456', 'BJ')).toBe('96123456');
+  it('returns stripped number as-is when no country and no prefix', () => {
+    expect(normalizePhone('96700001')).toBe('96700001');
   });
 });
 
