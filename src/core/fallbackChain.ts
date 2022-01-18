@@ -1,5 +1,4 @@
 import { rankProviders } from './routingEngine';
-import { isRetryable } from '../providers/base/ProviderResult';
 import logger from '../config/logger';
 import type { ScoredProvider } from './routingEngine';
 
@@ -20,8 +19,19 @@ export async function buildFallbackChain(
     .slice(0, maxAttempts);
 }
 
+// Retryable codes — includes both provider-internal and public-facing variants.
+// 'PROVIDER_TIMEOUT' / 'PROVIDER_NETWORK_ERROR' come from ProviderResult.ts;
+// 'TIMEOUT' / 'NETWORK_ERROR' are used in some call sites and test scenarios.
+// FIXME: unify code naming across layers (ProviderResult vs normalizeProviderError output)
+const RETRYABLE_ERROR_CODES = new Set<string>([
+  'PROVIDER_TIMEOUT',
+  'TIMEOUT',
+  'PROVIDER_NETWORK_ERROR',
+  'NETWORK_ERROR',
+]);
+
 export function shouldFallback(errorCode: string): boolean {
-  return isRetryable(errorCode);
+  return RETRYABLE_ERROR_CODES.has(errorCode);
 }
 
 export function logFallback(
