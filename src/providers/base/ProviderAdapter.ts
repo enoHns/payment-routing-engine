@@ -1,3 +1,5 @@
+export type ProviderIntegrationMode = 'DIRECT' | 'REDIRECT';
+
 export interface PaymentRequest {
   transactionId: string;
   phone: string;
@@ -11,12 +13,14 @@ export interface PaymentRequest {
 
 export interface PaymentResponse {
   providerTxId: string;
-  status: 'PENDING' | 'SUCCESS' | 'FAILED';
+  status: 'PENDING' | 'REQUIRES_REDIRECT' | 'SUCCESS' | 'FAILED';
+  checkoutUrl?: string;
   rawResponse?: unknown;
 }
 
 export interface ProviderAdapter {
   readonly name: string;
+  readonly integrationMode: ProviderIntegrationMode;
   initiatePayment(request: PaymentRequest): Promise<PaymentResponse>;
   verifyWebhook(payload: unknown, signature?: string): boolean;
 }

@@ -23,12 +23,13 @@ function parseRedisUrl(url: string) {
 }
 
 async function processJob(job: Job<RoutingJobPayload>): Promise<void> {
-  const { transactionId, operator, country, phone, amount, currency, webhookUrl, excludeProviders } = job.data;
+  const { transactionId, operator, country, phone, amount, currency, webhookUrl, excludeProviders, redirectAllowed } = job.data;
   logger.info({ transactionId, jobId: job.id }, 'Processing routing job');
 
   const chain = await buildFallbackChain(operator, country, {
     maxAttempts:      env.MAX_FALLBACK_ATTEMPTS ?? 3,
     excludeProviders,
+    redirectAllowed:  redirectAllowed ?? true,
   });
 
   if (chain.length === 0) {
@@ -51,6 +52,29 @@ async function processJob(job: Job<RoutingJobPayload>): Promise<void> {
     const response = await adapter.initiatePayment({
       transactionId, phone, amount, currency, country, operator, webhookUrl,
     });
+
+    if (response.status === 'REQUIRES_REDIRECT') {
+      // REDIRECT provider: store the checkout URL and wait for the webhook to confirm.
+      // No automatic fallback — the redirect is intentional, not an error.
+      await updateAttempt(attempt.id, {
+        providerTxId: response.providerTxId,
+        status:       AttemptStatus.PENDING,
+        latencyMs:    Date.now() - startedAt,
+      });
+      await updateTransactionStatus(transactionId, TxStatus.REQUIRES_REDIRECT, {
+        checkoutUrl: response.checkoutUrl,
+      });
+      await createAuditLog({
+        transactionId, event: 'REDIRECT_CHECKOUT_GENERATED',
+        payload: { provider: provider.name, checkoutUrl: response.checkoutUrl },
+      });
+      logger.info(
+        { transactionId, provider: provider.name, checkoutUrl: response.checkoutUrl },
+        'Redirect checkout URL ready — awaiting customer action',
+      );
+      return;
+    }
+
     await updateAttempt(attempt.id, {
       providerTxId: response.providerTxId,
       status:       AttemptStatus.PENDING,

@@ -1,11 +1,12 @@
 import axios from 'axios';
-import { ProviderAdapter, PaymentRequest, PaymentResponse } from '../base/ProviderAdapter';
+import { ProviderAdapter, ProviderIntegrationMode, PaymentRequest, PaymentResponse } from '../base/ProviderAdapter';
 import { safeHmacCompare } from '../../utils/crypto';
 import { env } from '../../config/env';
 import logger from '../../config/logger';
 
 export class FeexpayAdapter implements ProviderAdapter {
   readonly name = 'feexpay';
+  readonly integrationMode: ProviderIntegrationMode = 'DIRECT';
 
   async initiatePayment(req: PaymentRequest): Promise<PaymentResponse> {
     const response = await axios.post(`https://api.feexpay.me/api/transactions/public/requesttopay`, {

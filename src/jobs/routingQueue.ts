@@ -12,6 +12,7 @@ export interface RoutingJobPayload {
   attemptNumber:    number;
   excludeProviders: string[];
   webhookUrl:       string;
+  redirectAllowed:  boolean;
 }
 
 const QUEUE_NAME = 'routing';

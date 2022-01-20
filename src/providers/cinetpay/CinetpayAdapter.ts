@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { ProviderAdapter, PaymentRequest, PaymentResponse } from '../base/ProviderAdapter';
+import { ProviderAdapter, ProviderIntegrationMode, PaymentRequest, PaymentResponse } from '../base/ProviderAdapter';
 import { env } from '../../config/env';
 import logger from '../../config/logger';
 
@@ -8,6 +8,7 @@ const TIMEOUT  = 10000;
 
 export class CinetpayAdapter implements ProviderAdapter {
   readonly name = 'cinetpay';
+  readonly integrationMode: ProviderIntegrationMode = 'DIRECT';
 
   async initiatePayment(req: PaymentRequest): Promise<PaymentResponse> {
     const response = await axios.post(

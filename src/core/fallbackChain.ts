@@ -5,6 +5,13 @@ import type { ScoredProvider } from './routingEngine';
 interface FallbackOptions {
   maxAttempts:       number;
   excludeProviders?: string[];
+  /**
+   * When false, providers with integrationMode === 'REDIRECT' are excluded
+   * from the chain (useful when the merchant's integration cannot handle a
+   * redirect flow, e.g. server-to-server use cases).
+   * Defaults to true.
+   */
+  redirectAllowed?: boolean;
 }
 
 export async function buildFallbackChain(
@@ -12,10 +19,11 @@ export async function buildFallbackChain(
   country:  string,
   options:  FallbackOptions,
 ): Promise<ScoredProvider[]> {
-  const { maxAttempts, excludeProviders = [] } = options;
+  const { maxAttempts, excludeProviders = [], redirectAllowed = true } = options;
   const ranked = await rankProviders(operator, country);
   return ranked
     .filter(sp => !excludeProviders.includes(sp.provider.name))
+    .filter(sp => redirectAllowed || sp.provider.integrationMode !== 'REDIRECT')
     .slice(0, maxAttempts);
 }
 

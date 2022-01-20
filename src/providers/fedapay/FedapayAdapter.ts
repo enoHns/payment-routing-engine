@@ -1,11 +1,12 @@
 import axios from 'axios';
-import { ProviderAdapter, PaymentRequest, PaymentResponse } from '../base/ProviderAdapter';
+import { ProviderAdapter, ProviderIntegrationMode, PaymentRequest, PaymentResponse } from '../base/ProviderAdapter';
 import { safeHmacCompare } from '../../utils/crypto';
 import { env } from '../../config/env';
 import logger from '../../config/logger';
 
 export class FedapayAdapter implements ProviderAdapter {
   readonly name = 'fedapay';
+  readonly integrationMode: ProviderIntegrationMode = 'DIRECT';
 
   async initiatePayment(req: PaymentRequest): Promise<PaymentResponse> {
     const headers = { Authorization: `Bearer ${env.FEDAPAY_PRIVATE_KEY}`, 'Content-Type': 'application/json' };

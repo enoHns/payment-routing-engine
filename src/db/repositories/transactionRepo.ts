@@ -35,7 +35,7 @@ export async function findTransactionByIdempotencyKey(key: string): Promise<Tran
 export async function updateTransactionStatus(
   id: string,
   status: TxStatus,
-  extra?: Partial<Pick<Transaction, 'operator' | 'settledAt'>>,
+  extra?: Partial<Pick<Transaction, 'operator' | 'settledAt' | 'checkoutUrl'>>,
 ): Promise<void> {
   await getPrismaClient().transaction.updateMany({
     where: {

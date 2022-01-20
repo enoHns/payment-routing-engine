@@ -1,8 +1,10 @@
 import providerConfig from '../data/providerConfig.json';
+import type { ProviderIntegrationMode } from '../providers/base/ProviderAdapter';
 
 export interface ProviderConfig {
   name: string;
   displayName: string;
+  integrationMode: ProviderIntegrationMode;
   supportedCountries: string[];
   supportedOperators: Record<string, string[]>;
   priority: number;

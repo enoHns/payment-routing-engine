@@ -13,12 +13,13 @@ import logger from '../config/logger';
 import type { InitiatePaymentBody, InitiatePaymentResponse } from '../types/payment';
 
 const paymentSchema = z.object({
-  phone:          z.string().min(8).max(20).trim(),
-  country:        z.string().length(2).toUpperCase(),
-  amount:         z.number().positive().finite(),
-  currency:       z.string().length(3).toUpperCase(),
-  idempotencyKey: z.string().uuid().optional(),
-  webhookUrl:     z.string().url().optional(),
+  phone:           z.string().min(8).max(20).trim(),
+  country:         z.string().length(2).toUpperCase(),
+  amount:          z.number().positive().finite(),
+  currency:        z.string().length(3).toUpperCase(),
+  idempotencyKey:  z.string().uuid().optional(),
+  webhookUrl:      z.string().url().optional(),
+  redirectAllowed: z.boolean().default(true),
 }).strict();
 
 type PaymentInput = z.infer<typeof paymentSchema>;
@@ -30,7 +31,7 @@ export const paymentRoutes: FastifyPluginAsync = async (fastify) => {
       const parsed = paymentSchema.safeParse(request.body);
       if (!parsed.success) return sendZodError(reply, parsed.error);
 
-      const { phone, country, amount, currency, idempotencyKey, webhookUrl }: PaymentInput = parsed.data;
+      const { phone, country, amount, currency, idempotencyKey, webhookUrl, redirectAllowed }: PaymentInput = parsed.data;
       const normalized = normalizePhone(phone, country);
 
       const resolved = tryResolveOperator(normalized, country);
@@ -71,6 +72,7 @@ export const paymentRoutes: FastifyPluginAsync = async (fastify) => {
         attemptNumber:    1,
         excludeProviders: [],
         webhookUrl:       webhookUrl ?? `${env.WEBHOOK_BASE_URL}/webhook`,
+        redirectAllowed,
       });
 
       logger.info({ transactionId: tx.id, country, operator }, 'Payment initiated');

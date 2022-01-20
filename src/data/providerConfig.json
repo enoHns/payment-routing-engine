@@ -4,6 +4,7 @@
     {
       "name": "kkiapay",
       "displayName": "Kkiapay",
+      "integrationMode": "REDIRECT",
       "supportedCountries": ["BJ"],
       "supportedOperators": {
         "BJ": ["MTN", "Moov"]
@@ -14,6 +15,7 @@
     {
       "name": "fedapay",
       "displayName": "FedaPay",
+      "integrationMode": "DIRECT",
       "supportedCountries": ["BJ"],
       "supportedOperators": {
         "BJ": ["MTN", "Moov", "Celtiis"]
@@ -24,6 +26,7 @@
     {
       "name": "cinetpay",
       "displayName": "CinetPay",
+      "integrationMode": "DIRECT",
       "supportedCountries": ["CI", "SN", "TG", "BF", "CM"],
       "supportedOperators": {
         "CI": ["Orange", "MTN", "Moov"],
@@ -36,6 +39,7 @@
     {
       "name": "feexpay",
       "displayName": "FeexPay",
+      "integrationMode": "DIRECT",
       "supportedCountries": ["BJ", "CI", "TG", "SN"],
       "supportedOperators": {
         "BJ": ["MTN", "Moov"],
@@ -49,6 +53,7 @@
     {
       "name": "paydunya",
       "displayName": "PayDunya",
+      "integrationMode": "DIRECT",
       "supportedCountries": ["SN", "CI", "BF", "ML", "NE"],
       "supportedOperators": {
         "SN": ["Orange", "Free", "Wave"],
