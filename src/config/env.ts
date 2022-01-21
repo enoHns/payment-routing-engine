@@ -15,6 +15,9 @@ const envSchema = z.object({
   // HMAC key used to verify incoming KKiaPay webhooks (= KKIAPAY_WEBHOOK_SECRET in their dashboard)
   KKIAPAY_HMAC_KEY:         z.string().min(1),
   KKIAPAY_BASE_URL:         z.string().url().default('https://api.kkiapay.me'),
+  // KKiaPay uses a hosted widget for collection (no server-side initiation API).
+  // KKIAPAY_WIDGET_URL is the base URL of the checkout widget the engine redirects to.
+  KKIAPAY_WIDGET_URL:       z.string().url().default('https://app.kkiapay.me'),
   KKIAPAY_TIMEOUT_MS:       z.coerce.number().default(30000),
 
   // ── FedaPay (optional) ─────────────────────────────────────────────────
