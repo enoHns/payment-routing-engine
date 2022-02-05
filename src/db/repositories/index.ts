@@ -1,9 +1,9 @@
 export {
   createTransaction,
   findTransactionById,
-  findByIdempotencyKey,
+  findTransactionByIdempotencyKey as findByIdempotencyKey,
   updateTransactionStatus,
-  findByPhone,
+  findTransactionsByPhone as findByPhone,
 } from './transactionRepo';
 
 export {
