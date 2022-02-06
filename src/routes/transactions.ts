@@ -1,5 +1,5 @@
 import { FastifyPluginAsync, FastifyRequest } from 'fastify';
-import { findTransactionById, findByPhone } from '../db/repositories/transactionRepo';
+import { findTransactionById, findByPhone } from '../db/repositories';
 import { findAttemptsByTransactionId } from '../db/repositories/attemptRepo';
 import type { TransactionResponse, AttemptResponse } from '../types/payment';
 

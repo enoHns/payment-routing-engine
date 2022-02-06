@@ -6,7 +6,7 @@ import { sendZodError } from '../utils/zodError';
 import {
   createTransaction,
   findByIdempotencyKey,
-} from '../db/repositories/transactionRepo';
+} from '../db/repositories';
 import { enqueueRoutingJob } from '../jobs/routingQueue';
 import { env } from '../config/env';
 import logger from '../config/logger';
