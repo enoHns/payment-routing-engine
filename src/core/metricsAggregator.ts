@@ -24,3 +24,7 @@ export async function aggregateProviderStats(
     { successCount: 0, failureCount: 0, totalLatencyMs: 0, sampleCount: 0 },
   );
 }
+
+// Public alias — routingEngine and admin/metrics route import this name.
+// TODO: consolidate to a single name in a future minor refactor
+export const getRecentProviderStats = aggregateProviderStats;
