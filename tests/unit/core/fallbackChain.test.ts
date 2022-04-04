@@ -1,55 +1,52 @@
 jest.mock('../../../src/core/routingEngine', () => ({
   rankProviders: jest.fn(),
 }));
-jest.mock('../../../src/core/scoreCache', () => ({
-  getCachedScore: jest.fn().mockResolvedValue(null),
-  setCachedScore: jest.fn(),
-}));
 
 import { buildFallbackChain, shouldFallback } from '../../../src/core/fallbackChain';
 import { rankProviders } from '../../../src/core/routingEngine';
 
 const mockRank = rankProviders as jest.MockedFunction<typeof rankProviders>;
-
-const PROVIDERS = [
-  { provider: { name: 'kkiapay', priority: 1 } as any, score: 0.9 },
-  { provider: { name: 'fedapay', priority: 2 } as any, score: 0.7 },
-  { provider: { name: 'feexpay', priority: 2 } as any, score: 0.6 },
-];
+const make = (name: string, priority: number, score: number) => ({
+  provider: { name, priority, active: true, supportedCountries: ['BJ'], displayName: name, supportedOperators: {} },
+  score, fromCache: false,
+});
 
 describe('buildFallbackChain', () => {
-  beforeEach(() => { mockRank.mockResolvedValue(PROVIDERS); });
+  beforeEach(() => {
+    mockRank.mockResolvedValue([
+      make('kkiapay', 1, 0.9), make('fedapay', 2, 0.7), make('feexpay', 3, 0.6),
+    ] as any);
+  });
 
-  it('returns maxAttempts providers', async () => {
-    const chain = await buildFallbackChain('MTN', 'BJ', { maxAttempts: 2 });
-    expect(chain).toHaveLength(2);
+  it('returns all providers up to maxAttempts', async () => {
+    const chain = await buildFallbackChain('MTN', 'BJ', { maxAttempts: 3 });
+    expect(chain).toHaveLength(3);
+    expect(chain[0].provider.name).toBe('kkiapay');
   });
 
   it('excludes specified providers', async () => {
     const chain = await buildFallbackChain('MTN', 'BJ', {
-      maxAttempts: 3,
-      excludeProviders: ['kkiapay'],
+      maxAttempts: 3, excludeProviders: ['kkiapay'],
     });
-    expect(chain.map(sp => sp.provider.name)).not.toContain('kkiapay');
+    expect(chain[0].provider.name).toBe('fedapay');
+    expect(chain).toHaveLength(2);
   });
 
-  it('returns all providers up to maxAttempts', async () => {
-    const chain = await buildFallbackChain('MTN', 'BJ', { maxAttempts: 10 });
-    expect(chain).toHaveLength(PROVIDERS.length);
+  it('respects maxAttempts', async () => {
+    const chain = await buildFallbackChain('MTN', 'BJ', { maxAttempts: 2 });
+    expect(chain).toHaveLength(2);
+  });
+
+  it('returns empty when all excluded', async () => {
+    const chain = await buildFallbackChain('MTN', 'BJ', {
+      maxAttempts: 3, excludeProviders: ['kkiapay', 'fedapay', 'feexpay'],
+    });
+    expect(chain).toHaveLength(0);
   });
 });
 
 describe('shouldFallback', () => {
-  it('returns true for TIMEOUT', () => {
-    expect(shouldFallback('PROVIDER_TIMEOUT')).toBe(true);
-  });
-  it('returns true for NETWORK_ERROR', () => {
-    expect(shouldFallback('PROVIDER_NETWORK_ERROR')).toBe(true);
-  });
-  it('returns false for INSUFFICIENT_FUNDS', () => {
-    expect(shouldFallback('PROVIDER_INSUFFICIENT_FUNDS')).toBe(false);
-  });
-  it('returns false for DUPLICATE', () => {
-    expect(shouldFallback('PROVIDER_DUPLICATE_TRANSACTION')).toBe(false);
-  });
+  it('returns true for TIMEOUT', () => { expect(shouldFallback('TIMEOUT')).toBe(true); });
+  it('returns true for NETWORK', () => { expect(shouldFallback('NETWORK_ERROR')).toBe(true); });
+  it('returns false for non-retryable', () => { expect(shouldFallback('UNKNOWN')).toBe(false); });
 });
