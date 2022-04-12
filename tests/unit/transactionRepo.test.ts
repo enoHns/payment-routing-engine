@@ -1,21 +1,23 @@
+import { vi } from 'vitest';
 import { createTransaction, findTransactionById, updateTransactionStatus } from '../../src/db/repositories/transactionRepo';
 import { TxStatus } from '@prisma/client';
 
 const mockPrisma = {
   transaction: {
-    create:     jest.fn(),
-    findUnique: jest.fn(),
-    update:     jest.fn(),
-    findMany:   jest.fn(),
+    create:     vi.fn(),
+    findUnique: vi.fn(),
+    update:     vi.fn(),
+    updateMany: vi.fn(),
+    findMany:   vi.fn(),
   },
 };
 
-jest.mock('../../src/db/prismaClient', () => ({
+vi.mock('../../src/db/prismaClient', () => ({
   getPrismaClient: () => mockPrisma,
 }));
 
 describe('transactionRepo', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   it('creates a transaction', async () => {
     const data = { idempotencyKey: 'k1', phone: '96123456', amount: 5000, currency: 'XOF', country: 'BJ' };
@@ -37,12 +39,22 @@ describe('transactionRepo', () => {
     expect(await findTransactionById('no-such-id')).toBeNull();
   });
 
-  it('updates transaction status', async () => {
-    mockPrisma.transaction.update.mockResolvedValue({});
+  it('skips update when transaction is already in terminal state', async () => {
+    // updateMany returns { count: 0 } when the WHERE guard excludes the row
+    mockPrisma.transaction.updateMany.mockResolvedValue({ count: 0 });
     await updateTransactionStatus('uuid-1', TxStatus.PROCESSING);
-    expect(mockPrisma.transaction.update).toHaveBeenCalledWith({
-      where: { id: 'uuid-1' },
-      data:  { status: TxStatus.PROCESSING },
+    expect(mockPrisma.transaction.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'uuid-1',
+        status: { notIn: [TxStatus.SUCCESS, TxStatus.FAILED, TxStatus.REFUNDED] },
+      },
+      data: { status: TxStatus.PROCESSING },
     });
+  });
+
+  it('updates status when not in terminal state', async () => {
+    mockPrisma.transaction.updateMany.mockResolvedValue({ count: 1 });
+    await updateTransactionStatus('uuid-1', TxStatus.SUCCESS, { settledAt: expect.any(Date) as any });
+    expect(mockPrisma.transaction.updateMany).toHaveBeenCalled();
   });
 });

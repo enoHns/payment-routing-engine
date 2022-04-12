@@ -26,12 +26,24 @@ export async function findTransactionByIdempotencyKey(key: string): Promise<Tran
   });
 }
 
+/**
+ * Update transaction status, guarding against overwriting terminal states.
+ * Uses updateMany so the call is a no-op (not an error) when the transaction
+ * is already SUCCESS / FAILED / REFUNDED — prevents double-charge in concurrent
+ * webhook + fallback scenarios.
+ */
 export async function updateTransactionStatus(
   id: string,
   status: TxStatus,
   extra?: Partial<Pick<Transaction, 'operator' | 'settledAt'>>,
 ): Promise<void> {
-  await getPrismaClient().transaction.update({ where: { id }, data: { status, ...extra } });
+  await getPrismaClient().transaction.updateMany({
+    where: {
+      id,
+      status: { notIn: [TxStatus.SUCCESS, TxStatus.FAILED, TxStatus.REFUNDED] },
+    },
+    data: { status, ...extra },
+  });
 }
 
 export async function findTransactionsByPhone(phone: string, take = 10): Promise<Transaction[]> {
