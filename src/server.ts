@@ -1,6 +1,6 @@
 import fastify, { FastifyInstance } from 'fastify';
-import helmet from 'fastify-helmet';
-import rateLimit from 'fastify-rate-limit';
+import helmet from '@fastify/helmet';
+import rateLimit from '@fastify/rate-limit';
 import { getRedisClient } from './cache/redis';
 import { errorHandlerPlugin } from './plugins/errorHandler';
 import requestIdPlugin from './plugins/requestId';
@@ -41,7 +41,6 @@ export async function buildServer(): Promise<FastifyInstance> {
 
   await server.register(errorHandlerPlugin);
   await server.register(requestIdPlugin);
-
   await server.register(healthRoutes);
   await server.register(paymentRoutes);
   await server.register(transactionRoutes);
