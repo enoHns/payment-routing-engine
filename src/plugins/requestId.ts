@@ -1,5 +1,5 @@
-import { FastifyPluginAsync } from 'fastify';
 import fp from 'fastify-plugin';
+import type { FastifyPluginAsync } from 'fastify';
 
 const requestIdPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('onSend', (_request, reply, _payload, done) => {
@@ -8,4 +8,4 @@ const requestIdPlugin: FastifyPluginAsync = async (fastify) => {
   });
 };
 
-export default fp(requestIdPlugin, { name: 'requestId' });
+export default fp(requestIdPlugin, { name: 'requestId', fastify: '4.x' });
