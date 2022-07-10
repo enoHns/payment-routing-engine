@@ -17,8 +17,8 @@ export const PROVIDER_ERROR_CODES = {
 export type ProviderErrorCode = typeof PROVIDER_ERROR_CODES[keyof typeof PROVIDER_ERROR_CODES];
 
 export function isRetryable(code: string): boolean {
-  return [
-    PROVIDER_ERROR_CODES.TIMEOUT,
-    PROVIDER_ERROR_CODES.NETWORK,
-  ].includes(code as ProviderErrorCode);
+  return (
+    code === PROVIDER_ERROR_CODES.TIMEOUT ||
+    code === PROVIDER_ERROR_CODES.NETWORK
+  );
 }

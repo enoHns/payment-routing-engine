@@ -10,7 +10,7 @@ export interface ProviderConfig {
 }
 
 export function getEligibleProviders(country: string, operator: string): ProviderConfig[] {
-  return (providerConfig.providers as ProviderConfig[])
+  return (providerConfig.providers as unknown as ProviderConfig[])
     .filter(p => {
       if (!p.active) return false;
       if (!p.supportedCountries.includes(country)) return false;
@@ -21,9 +21,9 @@ export function getEligibleProviders(country: string, operator: string): Provide
 }
 
 export function getProviderByName(name: string): ProviderConfig | undefined {
-  return (providerConfig.providers as ProviderConfig[]).find(p => p.name === name);
+  return (providerConfig.providers as unknown as ProviderConfig[]).find(p => p.name === name);
 }
 
 export function getAllActiveProviders(): ProviderConfig[] {
-  return (providerConfig.providers as ProviderConfig[]).filter(p => p.active);
+  return (providerConfig.providers as unknown as ProviderConfig[]).filter(p => p.active);
 }
