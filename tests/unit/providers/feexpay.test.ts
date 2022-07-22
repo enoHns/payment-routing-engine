@@ -1,6 +1,7 @@
+import { vi } from 'vitest';
 import crypto from 'crypto';
 
-jest.mock('../../../src/config/env', () => ({
+vi.mock('../../../src/config/env', () => ({
   env: { FEEXPAY_API_KEY: 'test-feexpay-key', FEEXPAY_SHOP_ID: 'shop1', NODE_ENV: 'test' },
 }));
 import { FeexpayAdapter } from '../../../src/providers/feexpay/FeexpayAdapter';

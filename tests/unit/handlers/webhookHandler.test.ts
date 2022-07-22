@@ -1,8 +1,10 @@
-jest.mock('../../../src/providers/adapterFactory');
-jest.mock('../../../src/db/repositories/attemptRepo');
-jest.mock('../../../src/db/repositories/transactionRepo');
-jest.mock('../../../src/db/repositories/auditLogRepo');
-jest.mock('../../../src/core/metricsUpdater');
+import { vi } from 'vitest';
+
+vi.mock('../../../src/providers/adapterFactory');
+vi.mock('../../../src/db/repositories/attemptRepo');
+vi.mock('../../../src/db/repositories/transactionRepo');
+vi.mock('../../../src/db/repositories/auditLogRepo');
+vi.mock('../../../src/core/metricsUpdater');
 
 import { processWebhook } from '../../../src/handlers/webhookHandler';
 import { getAdapter } from '../../../src/providers/adapterFactory';
@@ -10,20 +12,20 @@ import { findAttemptByProviderTxId, updateAttempt } from '../../../src/db/reposi
 import { updateTransactionStatus, findTransactionById } from '../../../src/db/repositories/transactionRepo';
 import { createAuditLog } from '../../../src/db/repositories/auditLogRepo';
 
-const mockGetAdapter    = getAdapter as jest.MockedFunction<typeof getAdapter>;
-const mockFindAttempt   = findAttemptByProviderTxId as jest.MockedFunction<typeof findAttemptByProviderTxId>;
-const mockFindTx        = findTransactionById as jest.MockedFunction<typeof findTransactionById>;
-const mockUpdateAttempt = updateAttempt as jest.MockedFunction<typeof updateAttempt>;
-const mockUpdateTx      = updateTransactionStatus as jest.MockedFunction<typeof updateTransactionStatus>;
-const mockAuditLog      = createAuditLog as jest.MockedFunction<typeof createAuditLog>;
+const mockGetAdapter    = getAdapter as ReturnType<typeof vi.fn>;
+const mockFindAttempt   = findAttemptByProviderTxId as ReturnType<typeof vi.fn>;
+const mockFindTx        = findTransactionById as ReturnType<typeof vi.fn>;
+const mockUpdateAttempt = updateAttempt as ReturnType<typeof vi.fn>;
+const mockUpdateTx      = updateTransactionStatus as ReturnType<typeof vi.fn>;
+const mockAuditLog      = createAuditLog as ReturnType<typeof vi.fn>;
 
-const mockAdapter = { name: 'kkiapay', verifyWebhook: jest.fn(), initiatePayment: jest.fn() };
+const mockAdapter = { name: 'kkiapay', verifyWebhook: vi.fn(), initiatePayment: vi.fn() };
 const ATTEMPT = { id: 'attempt-1', transactionId: 'tx-1', providerName: 'kkiapay', createdAt: new Date() } as any;
 const TX = { id: 'tx-1', operator: 'MTN', country: 'BJ' } as any;
 
 describe('processWebhook', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockGetAdapter.mockReturnValue(mockAdapter as any);
     mockFindAttempt.mockResolvedValue(ATTEMPT);
     mockFindTx.mockResolvedValue(TX);

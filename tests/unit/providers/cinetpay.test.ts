@@ -1,4 +1,5 @@
-jest.mock('../../../src/config/env', () => ({
+import { vi } from 'vitest';
+vi.mock('../../../src/config/env', () => ({
   env: { CINETPAY_API_KEY: 'test-api', CINETPAY_SITE_ID: '123', NODE_ENV: 'test' },
 }));
 import { CinetpayAdapter } from '../../../src/providers/cinetpay/CinetpayAdapter';

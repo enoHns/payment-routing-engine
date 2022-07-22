@@ -1,17 +1,20 @@
-jest.mock('../../../src/core/fallbackChain');
-jest.mock('../../../src/providers/adapterFactory');
-jest.mock('../../../src/db/repositories', () => ({
-  createAttempt:           jest.fn().mockResolvedValue({ id: 'att-1', createdAt: new Date() }),
-  updateAttempt:           jest.fn().mockResolvedValue(undefined),
-  updateTransactionStatus: jest.fn().mockResolvedValue(undefined),
-  createAuditLog:          jest.fn().mockResolvedValue(undefined),
+import { vi } from 'vitest';
+
+vi.mock('../../../src/core/fallbackChain');
+vi.mock('../../../src/providers/adapterFactory');
+vi.mock('../../../src/db/repositories', () => ({
+  createAttempt:           vi.fn().mockResolvedValue({ id: 'att-1', createdAt: new Date() }),
+  updateAttempt:           vi.fn().mockResolvedValue(undefined),
+  updateTransactionStatus: vi.fn().mockResolvedValue(undefined),
+  createAuditLog:          vi.fn().mockResolvedValue(undefined),
+  findTransactionById:     vi.fn().mockResolvedValue({ id: 'tx-1', status: 'PROCESSING' }),
 }));
 
 import { buildFallbackChain } from '../../../src/core/fallbackChain';
 import { getAdapter } from '../../../src/providers/adapterFactory';
 
-const mockBuildChain = buildFallbackChain as jest.MockedFunction<typeof buildFallbackChain>;
-const mockGetAdapter = getAdapter as jest.MockedFunction<typeof getAdapter>;
+const mockBuildChain = buildFallbackChain as ReturnType<typeof vi.fn>;
+const mockGetAdapter = getAdapter as ReturnType<typeof vi.fn>;
 
 const PROVIDER = {
   name: 'kkiapay', priority: 1, active: true,
@@ -20,7 +23,7 @@ const PROVIDER = {
 
 describe('routing job processing', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockBuildChain.mockResolvedValue([{ provider: PROVIDER as any, score: 0.9 }]);
   });
 

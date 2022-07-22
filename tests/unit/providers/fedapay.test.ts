@@ -1,6 +1,7 @@
+import { vi } from 'vitest';
 import crypto from 'crypto';
 
-jest.mock('../../../src/config/env', () => ({
+vi.mock('../../../src/config/env', () => ({
   env: {
     FEDAPAY_PRIVATE_KEY: 'test-fedapay-secret',
     NODE_ENV: 'test',

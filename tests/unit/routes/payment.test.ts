@@ -1,17 +1,19 @@
-jest.mock('../../../src/core/phoneResolver', () => ({
-  tryResolveOperator: jest.fn().mockReturnValue({ country: 'BJ', operator: 'MTN' }),
+import { vi } from 'vitest';
+
+vi.mock('../../../src/core/phoneResolver', () => ({
+  tryResolveOperator: vi.fn().mockReturnValue({ country: 'BJ', operator: 'MTN' }),
 }));
-jest.mock('../../../src/utils/phone', () => ({
-  normalizePhone: jest.fn().mockReturnValue('+22997000001'),
+vi.mock('../../../src/utils/phone', () => ({
+  normalizePhone: vi.fn().mockReturnValue('+22997000001'),
 }));
-jest.mock('../../../src/db/repositories/transactionRepo', () => ({
-  createTransaction:    jest.fn().mockResolvedValue({ id: 'tx-1', status: 'INITIATED', webhookUrl: null }),
-  findByIdempotencyKey: jest.fn().mockResolvedValue(null),
+vi.mock('../../../src/db/repositories/transactionRepo', () => ({
+  createTransaction:    vi.fn().mockResolvedValue({ id: 'tx-1', status: 'INITIATED', webhookUrl: null }),
+  findByIdempotencyKey: vi.fn().mockResolvedValue(null),
 }));
-jest.mock('../../../src/jobs/routingQueue', () => ({
-  enqueueRoutingJob: jest.fn().mockResolvedValue(undefined),
+vi.mock('../../../src/jobs/routingQueue', () => ({
+  enqueueRoutingJob: vi.fn().mockResolvedValue(undefined),
 }));
-jest.mock('../../../src/config/env', () => ({
+vi.mock('../../../src/config/env', () => ({
   env: {
     PORT: 3000,
     RATE_LIMIT_MAX: 100,
@@ -22,6 +24,8 @@ jest.mock('../../../src/config/env', () => ({
 
 import Fastify from 'fastify';
 import { paymentRoutes } from '../../../src/routes/payment';
+import { tryResolveOperator } from '../../../src/core/phoneResolver';
+import { findByIdempotencyKey } from '../../../src/db/repositories/transactionRepo';
 
 const buildApp = async () => {
   const app = Fastify();
@@ -60,8 +64,7 @@ describe('POST /payment (Zod validation)', () => {
   });
 
   it('returns 422 when operator not resolved', async () => {
-    const { tryResolveOperator } = jest.requireMock('../../../src/core/phoneResolver') as any;
-    tryResolveOperator.mockReturnValueOnce(null);
+    vi.mocked(tryResolveOperator).mockReturnValueOnce(null);
     const res = await app.inject({
       method: 'POST', url: '/payment',
       payload: { phone: '+33600000000', amount: 1000, currency: 'EUR' },
@@ -70,8 +73,7 @@ describe('POST /payment (Zod validation)', () => {
   });
 
   it('returns 202 on existing idempotencyKey', async () => {
-    const { findByIdempotencyKey } = jest.requireMock('../../../src/db/repositories/transactionRepo') as any;
-    findByIdempotencyKey.mockResolvedValueOnce({ id: 'tx-existing', status: 'PROCESSING' });
+    vi.mocked(findByIdempotencyKey).mockResolvedValueOnce({ id: 'tx-existing', status: 'PROCESSING' } as any);
     const res = await app.inject({
       method: 'POST', url: '/payment',
       payload: { phone: '+22997000001', amount: 5000, currency: 'XOF', idempotencyKey: '550e8400-e29b-41d4-a716-446655440000' },

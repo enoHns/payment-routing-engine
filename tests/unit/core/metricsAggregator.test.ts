@@ -1,14 +1,16 @@
-jest.mock('../../../src/db/repositories/metricsRepo', () => ({
-  getRecentMetrics: jest.fn(),
+import { vi } from 'vitest';
+
+vi.mock('../../../src/db/repositories/metricsRepo', () => ({
+  getRecentMetrics: vi.fn(),
 }));
 
 import { aggregateProviderStats } from '../../../src/core/metricsAggregator';
 import { getRecentMetrics } from '../../../src/db/repositories/metricsRepo';
 
-const mockGetRecentMetrics = getRecentMetrics as jest.MockedFunction<typeof getRecentMetrics>;
+const mockGetRecentMetrics = getRecentMetrics as ReturnType<typeof vi.fn>;
 
 describe('aggregateProviderStats', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   it('returns neutral cold start when no data', async () => {
     mockGetRecentMetrics.mockResolvedValue([]);

@@ -1,6 +1,7 @@
+import { vi } from 'vitest';
 import crypto from 'crypto';
 
-jest.mock('../../../src/config/env', () => ({
+vi.mock('../../../src/config/env', () => ({
   env: {
     PAYDUNYA_MASTER_KEY:  'test-master-key',
     PAYDUNYA_PRIVATE_KEY: 'test-private-key',

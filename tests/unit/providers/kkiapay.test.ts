@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import crypto from 'crypto';
 import { KkiapayAdapter } from '../../../src/providers/kkiapay/KkiapayAdapter';
 
@@ -6,7 +7,7 @@ process.env.KKIAPAY_PRIVATE_KEY = 'test-private-key';
 process.env.KKIAPAY_PUBLIC_KEY  = 'test-public-key';
 process.env.KKIAPAY_HMAC_KEY    = 'test-hmac-key-32bytes-padding____';
 
-jest.mock('../../../src/providers/kkiapay/kkiapay.config', () => ({
+vi.mock('../../../src/providers/kkiapay/kkiapay.config', () => ({
   kkiapayConfig: {
     privateKey: 'test-private-key',
     publicKey:  'test-public-key',

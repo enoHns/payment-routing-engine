@@ -1,8 +1,10 @@
-jest.mock('../../../src/db/repositories/metricsRepo', () => ({
-  upsertMetricWindow: jest.fn().mockResolvedValue(undefined),
+import { vi } from 'vitest';
+
+vi.mock('../../../src/db/repositories/metricsRepo', () => ({
+  upsertMetricWindow: vi.fn().mockResolvedValue(undefined),
 }));
-jest.mock('../../../src/core/scoreCache', () => ({
-  invalidateScore: jest.fn().mockResolvedValue(undefined),
+vi.mock('../../../src/core/scoreCache', () => ({
+  invalidateScore: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { recordAttemptOutcome, getCurrentWindowStart } from '../../../src/core/metricsUpdater';
@@ -19,7 +21,7 @@ describe('getCurrentWindowStart', () => {
 });
 
 describe('recordAttemptOutcome', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   it('calls upsertMetricWindow with SUCCESS', async () => {
     await recordAttemptOutcome('kkiapay', 'MTN', 'BJ', true, 2500);
