@@ -1,24 +1,25 @@
-jest.mock('../../../src/db/repositories/transactionRepo', () => ({
-  findTransactionById: jest.fn(),
-  findByPhone:         jest.fn(),
+import { vi } from 'vitest';
+
+vi.mock('../../../src/db/repositories', () => ({
+  findTransactionById: vi.fn(),
+  findByPhone:         vi.fn(),
 }));
-jest.mock('../../../src/db/repositories/attemptRepo', () => ({
-  findAttemptsByTransactionId: jest.fn().mockResolvedValue([]),
+vi.mock('../../../src/db/repositories/attemptRepo', () => ({
+  findAttemptsByTransactionId: vi.fn().mockResolvedValue([]),
 }));
 
 import Fastify from 'fastify';
 import { transactionRoutes } from '../../../src/routes/transactions';
-import {
-  findTransactionById,
-  findByPhone,
-} from '../../../src/db/repositories/transactionRepo';
+import { findTransactionById, findByPhone } from '../../../src/db/repositories';
 
-const mockFindById    = findTransactionById as jest.MockedFunction<typeof findTransactionById>;
-const mockFindByPhone = findByPhone as jest.MockedFunction<typeof findByPhone>;
+const mockFindById    = vi.mocked(findTransactionById);
+const mockFindByPhone = vi.mocked(findByPhone);
 
+// Prisma Decimal mock: expose toNumber() so route handler can call tx.amount.toNumber()
 const MOCK_TX = {
   id: 'tx-1', phone: '+22997000001', country: 'BJ', operator: 'MTN',
-  amount: 5000, currency: 'XOF', status: 'INITIATED', webhookUrl: null,
+  amount: { toNumber: () => 5000 },
+  currency: 'XOF', status: 'INITIATED', webhookUrl: null,
   createdAt: new Date('2021-01-01T00:00:00Z'),
   updatedAt: new Date('2021-01-01T00:00:00Z'),
 };
@@ -33,7 +34,7 @@ describe('GET /transactions/:id', () => {
   let app: ReturnType<typeof Fastify>;
   beforeAll(async () => { app = await buildApp(); });
   afterAll(async () => { await app.close(); });
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   it('returns 200 with tx data', async () => {
     mockFindById.mockResolvedValue(MOCK_TX as any);
@@ -53,7 +54,7 @@ describe('GET /transactions?phone=', () => {
   let app: ReturnType<typeof Fastify>;
   beforeAll(async () => { app = await buildApp(); });
   afterAll(async () => { await app.close(); });
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   it('returns transaction list for phone', async () => {
     mockFindByPhone.mockResolvedValue([MOCK_TX] as any);

@@ -1,12 +1,14 @@
-jest.mock('../../../src/handlers/webhookHandler', () => ({
-  processWebhook: jest.fn(),
+import { vi } from 'vitest';
+
+vi.mock('../../../src/handlers/webhookHandler', () => ({
+  processWebhook: vi.fn(),
 }));
 
 import Fastify from 'fastify';
 import { webhookRoutes } from '../../../src/routes/webhook';
 import { processWebhook } from '../../../src/handlers/webhookHandler';
 
-const mockProcess = processWebhook as jest.MockedFunction<typeof processWebhook>;
+const mockProcess = vi.mocked(processWebhook);
 
 const buildApp = async () => {
   const app = Fastify();
@@ -18,7 +20,7 @@ describe('POST /webhook/:provider', () => {
   let app: ReturnType<typeof Fastify>;
   beforeAll(async () => { app = await buildApp(); });
   afterAll(async () => { await app.close(); });
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   it('returns 200 on SUCCESS webhook', async () => {
     mockProcess.mockResolvedValue({ transactionId: 'tx-1', status: 'SUCCESS' });
