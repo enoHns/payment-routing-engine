@@ -1,58 +1,47 @@
-jest.mock('../../../src/core/metricsAggregator', () => ({
-  aggregateProviderStats: jest.fn(),
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('../../../src/core/providerRegistry', () => ({
+  getEligibleProviders: vi.fn(),
 }));
-jest.mock('../../../src/core/scoreCache', () => ({
-  getCachedScore: jest.fn().mockResolvedValue(null),
-  setCachedScore: jest.fn().mockResolvedValue(undefined),
+vi.mock('../../../src/core/metricsAggregator', () => ({
+  getRecentProviderStats: vi.fn().mockResolvedValue({
+    successCount: 5, failureCount: 1, totalLatencyMs: 5000, sampleCount: 5,
+  }),
+}));
+vi.mock('../../../src/core/scoreCache', () => ({
+  getCachedScore: vi.fn().mockResolvedValue(null),
+  setCachedScore: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { rankProviders, selectBestProvider } from '../../../src/core/routingEngine';
-import { aggregateProviderStats } from '../../../src/core/metricsAggregator';
+import { getEligibleProviders } from '../../../src/core/providerRegistry';
 
-const mockAgg = aggregateProviderStats as jest.MockedFunction<typeof aggregateProviderStats>;
+const mockEligible = getEligibleProviders as ReturnType<typeof vi.fn>;
 
-const GOOD_STATS = { successCount: 90, failureCount: 10, totalLatencyMs: 20000, sampleCount: 100 };
-const POOR_STATS = { successCount: 30, failureCount: 70, totalLatencyMs: 80000, sampleCount: 100 };
+const P1 = { name: 'kkiapay', priority: 1, active: true, supportedCountries: ['BJ'], displayName: 'Kkiapay', supportedOperators: {} };
+const P2 = { name: 'fedapay', priority: 2, active: true, supportedCountries: ['BJ'], displayName: 'Fedapay', supportedOperators: {} };
 
-describe('rankProviders — BJ/MTN', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    // kkiapay has priority 1 — good stats; fedapay priority 2 — poor stats
-    mockAgg.mockImplementation(async (provider) => {
-      if (provider === 'kkiapay') return GOOD_STATS;
-      if (provider === 'fedapay') return POOR_STATS;
-      return { successCount: 0, failureCount: 0, totalLatencyMs: 0, sampleCount: 0 };
-    });
-  });
+describe('rankProviders', () => {
+  beforeEach(() => { mockEligible.mockReturnValue([P1, P2]); });
 
-  it('returns at least one provider', async () => {
+  it('returns ranked providers', async () => {
     const ranked = await rankProviders('MTN', 'BJ');
-    expect(ranked.length).toBeGreaterThan(0);
+    expect(ranked).toHaveLength(2);
   });
 
-  it('highest score is first', async () => {
-    const ranked = await rankProviders('MTN', 'BJ');
-    for (let i = 1; i < ranked.length; i++) {
-      expect(ranked[i - 1].score).toBeGreaterThanOrEqual(ranked[i].score);
-    }
-  });
-
-  it('kkiapay ranked above fedapay given better stats + priority', async () => {
-    const ranked = await rankProviders('MTN', 'BJ');
-    const names = ranked.map(r => r.provider.name);
-    expect(names.indexOf('kkiapay')).toBeLessThan(names.indexOf('fedapay'));
-  });
-
-  it('throws for unsupported operator/country', async () => {
-    await expect(rankProviders('Wave', 'BJ')).rejects.toThrow('No eligible providers');
+  it('returns empty for no eligible providers', async () => {
+    mockEligible.mockReturnValue([]);
+    const ranked = await rankProviders('Wave', 'BJ');
+    expect(ranked).toHaveLength(0);
   });
 });
 
 describe('selectBestProvider', () => {
-  it('returns the top-ranked provider', async () => {
-    mockAgg.mockResolvedValue(GOOD_STATS);
-    const best = await selectBestProvider('MTN', 'BJ');
-    expect(best.provider.name).toBeDefined();
-    expect(best.score).toBeGreaterThan(0);
+  it('returns first item', () => {
+    const result = selectBestProvider([{ provider: P1, score: 0.9, fromCache: false }] as any);
+    expect(result?.provider.name).toBe('kkiapay');
+  });
+  it('returns null for empty array', () => {
+    expect(selectBestProvider([])).toBeNull();
   });
 });
