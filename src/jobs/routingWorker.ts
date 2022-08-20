@@ -7,6 +7,7 @@ import {
   createAttempt,
   updateAttempt,
   updateTransactionStatus,
+  findTransactionById,
   createAuditLog,
 } from '../db/repositories';
 import { AttemptStatus, TxStatus } from '@prisma/client';
@@ -68,7 +69,16 @@ async function processJob(job: Job<RoutingJobPayload>): Promise<void> {
       errorMessage: err.message, resolvedAt: new Date(),
     });
     await createAuditLog({ transactionId, event: 'PROVIDER_ERROR', payload: { provider: provider.name, ...err } });
+
     if (shouldFallback(err.code) && chain.length > 1) {
+      // Guard: check if a concurrent webhook already resolved the transaction.
+      // Without this check, a successful webhook + our retry = potential double-charge.
+      const currentTx = await findTransactionById(transactionId);
+      if (currentTx && (currentTx.status === TxStatus.SUCCESS || currentTx.status === TxStatus.FAILED)) {
+        logger.info({ transactionId, status: currentTx.status }, 'Transaction already resolved — skipping fallback retry');
+        return;
+      }
+
       const nextProvider = chain[1].provider.name;
       logFallback(transactionId, provider.name, nextProvider, err.code);
       await enqueueRoutingJob({
@@ -78,29 +88,16 @@ async function processJob(job: Job<RoutingJobPayload>): Promise<void> {
     } else {
       await updateTransactionStatus(transactionId, TxStatus.FAILED);
       await createAuditLog({ transactionId, event: 'TRANSACTION_FAILED', payload: { reason: err.code } });
+      logger.warn({ transactionId, provider: provider.name, errorCode: err.code }, 'Transaction failed — no more fallbacks');
     }
   }
 }
 
-let worker: Worker<RoutingJobPayload> | null = null;
-
-export function startRoutingWorker(): Worker<RoutingJobPayload> {
-  worker = new Worker<RoutingJobPayload>(QUEUE_NAME, processJob, {
-    connection:  parseRedisUrl(env.REDIS_URL),
-    concurrency: CONCURRENCY,
-  });
-  worker.on('completed', (job) =>
-    logger.info({ jobId: job.id, transactionId: job.data.transactionId }, 'Job completed'));
-  worker.on('failed', (job, err) =>
-    logger.error({ jobId: job?.id, err }, 'Job failed'));
-  logger.info({ concurrency: CONCURRENCY }, 'Routing worker started');
-  return worker;
-}
-
-export async function stopRoutingWorker(): Promise<void> {
-  if (worker) {
-    await worker.close();
-    worker = null;
-    logger.info('Routing worker stopped');
-  }
+export function createRoutingWorker() {
+  const redisOptions = parseRedisUrl(env.REDIS_URL);
+  return new Worker<RoutingJobPayload>(
+    QUEUE_NAME,
+    processJob,
+    { connection: redisOptions, concurrency: CONCURRENCY },
+  );
 }
