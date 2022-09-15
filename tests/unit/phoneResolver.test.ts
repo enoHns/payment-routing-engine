@@ -1,23 +1,23 @@
 import { resolveOperator, normalizePhone } from '../../src/core/phoneResolver';
 
-describe('phoneResolver — Bénin', () => {
-  it('resolves MTN prefix 961', () => {
+describe('phoneResolver — Bénin (old 8-digit format)', () => {
+  it('resolves MTN 96X range', () => {
     expect(resolveOperator('96100001', 'BJ').operator).toBe('MTN');
   });
 
-  it('resolves MTN prefix 967', () => {
-    expect(resolveOperator('96700001', 'BJ').operator).toBe('MTN');
+  it('resolves MTN 97X range', () => {
+    expect(resolveOperator('97000001', 'BJ').operator).toBe('MTN');
   });
 
-  it('resolves Moov prefix 994', () => {
+  it('resolves Moov 99X range', () => {
     expect(resolveOperator('99400001', 'BJ').operator).toBe('Moov');
   });
 
-  it('resolves Moov prefix 998', () => {
-    expect(resolveOperator('99800001', 'BJ').operator).toBe('Moov');
+  it('resolves Moov 98X range', () => {
+    expect(resolveOperator('98000001', 'BJ').operator).toBe('Moov');
   });
 
-  it('resolves Celtiis prefix 910', () => {
+  it('resolves Celtiis 91X range', () => {
     expect(resolveOperator('91000001', 'BJ').operator).toBe('Celtiis');
   });
 
@@ -43,6 +43,31 @@ describe('phoneResolver — Bénin', () => {
 
   it('throws for unsupported country', () => {
     expect(() => resolveOperator('96700001', 'XX')).toThrow('Unsupported country');
+  });
+});
+
+describe('phoneResolver — Bénin (new 10-digit format, since Sept 12 2022)', () => {
+  it('resolves MTN new format (0161XXXXXX)', () => {
+    // ARCEP Benin migration: all 8-digit numbers had "01" prepended
+    const r = resolveOperator('0161000000', 'BJ');
+    expect(r.operator).toBe('MTN');
+    expect(r.normalized).toBe('+2290161000000');
+  });
+
+  it('resolves Moov new format (0164XXXXXX)', () => {
+    const r = resolveOperator('0164000000', 'BJ');
+    expect(r.operator).toBe('Moov');
+  });
+
+  it('resolves Celtiis new format (0190XXXXXX)', () => {
+    const r = resolveOperator('0190000000', 'BJ');
+    expect(r.operator).toBe('Celtiis');
+  });
+
+  it('accepts E.164 new format (+2290161XXXXXX)', () => {
+    const r = resolveOperator('+2290161000000', 'BJ');
+    expect(r.operator).toBe('MTN');
+    expect(r.normalized).toBe('+2290161000000');
   });
 });
 
@@ -79,8 +104,12 @@ describe('normalizePhone', () => {
 import { tryResolveOperator, isSupportedCountry } from '../../src/core/phoneResolver';
 
 describe('tryResolveOperator', () => {
-  it('returns result for valid phone', () => {
+  it('returns result for valid phone (old format)', () => {
     expect(tryResolveOperator('96123456', 'BJ')).not.toBeNull();
+  });
+
+  it('returns result for valid phone (new 10-digit format)', () => {
+    expect(tryResolveOperator('0161000000', 'BJ')).not.toBeNull();
   });
 
   it('returns null for unknown prefix', () => {
