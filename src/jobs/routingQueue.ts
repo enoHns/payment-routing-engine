@@ -15,17 +15,18 @@ export interface RoutingJobPayload {
 }
 
 const QUEUE_NAME = 'routing';
-const connection = {
-  host: new URL(env.REDIS_URL).hostname,
-  port: parseInt(new URL(env.REDIS_URL).port || '6379'),
-};
+
+function parseRedisUrl(url: string) {
+  const u = new URL(url);
+  return { host: u.hostname, port: parseInt(u.port || '6379', 10) };
+}
 
 let queue: Queue<RoutingJobPayload> | null = null;
 
 export function getRoutingQueue(): Queue<RoutingJobPayload> {
   if (!queue) {
     queue = new Queue<RoutingJobPayload>(QUEUE_NAME, {
-      connection,
+      connection: parseRedisUrl(env.REDIS_URL),
       defaultJobOptions: {
         attempts:         1,
         removeOnComplete: { count: 100 },
@@ -37,10 +38,7 @@ export function getRoutingQueue(): Queue<RoutingJobPayload> {
   return queue;
 }
 
-export async function enqueueRoutingJob(
-  payload: RoutingJobPayload,
-  delayMs = 0,
-): Promise<void> {
+export async function enqueueRoutingJob(payload: RoutingJobPayload, delayMs = 0): Promise<void> {
   await getRoutingQueue().add('route', payload, { delay: delayMs });
   logger.debug({ transactionId: payload.transactionId }, 'Routing job enqueued');
 }
