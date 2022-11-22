@@ -29,6 +29,8 @@ const envSchema = z.object({
   RATE_LIMIT_MAX:           z.coerce.number().default(100),
   RATE_LIMIT_WINDOW_MS:     z.coerce.number().default(60000),
   MAX_FALLBACK_ATTEMPTS:    z.coerce.number().default(3),
+  // Optional: when set, GET /admin/metrics requires x-api-key header
+  ADMIN_API_KEY:            z.string().optional(),
 }).strict();
 
 const parsed = envSchema.safeParse(process.env);

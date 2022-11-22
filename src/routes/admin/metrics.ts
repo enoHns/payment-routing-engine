@@ -4,6 +4,7 @@ import { getCachedScore, setCachedScore } from '../../core/scoreCache';
 import { getRecentProviderStats } from '../../core/metricsAggregator';
 import { computeProviderScore, DEFAULT_WEIGHTS } from '../../core/scoringEngine';
 import { getAllActiveProviders } from '../../core/providerRegistry';
+import { env } from '../../config/env';
 import logger from '../../config/logger';
 
 interface MetricEntry {
@@ -16,6 +17,20 @@ interface MetricEntry {
 }
 
 export const adminMetricsRoutes: FastifyPluginAsync = async (fastify) => {
+  // Auth guard: if ADMIN_API_KEY is configured, require x-api-key header.
+  // Leave unset in dev/test to keep the endpoint open.
+  fastify.addHook('preHandler', async (request, reply) => {
+    if (!env.ADMIN_API_KEY) return;
+    const providedKey = request.headers['x-api-key'];
+    if (typeof providedKey !== 'string' || providedKey !== env.ADMIN_API_KEY) {
+      return reply.code(401).send({
+        statusCode: 401,
+        error: 'Unauthorized',
+        message: 'x-api-key header missing or invalid',
+      });
+    }
+  });
+
   fastify.get('/admin/metrics', async (_request, reply) => {
     try {
       const combos = await getAllProviderCombinations();
