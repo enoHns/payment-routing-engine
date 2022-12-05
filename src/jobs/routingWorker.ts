@@ -16,6 +16,11 @@ import logger from '../config/logger';
 const QUEUE_NAME  = 'routing';
 const CONCURRENCY = 3;
 
+function parseRedisUrl(url: string) {
+  const u = new URL(url);
+  return { host: u.hostname, port: parseInt(u.port || '6379', 10) };
+}
+
 async function processJob(job: Job<RoutingJobPayload>): Promise<void> {
   const { transactionId, operator, country, phone, amount, currency, webhookUrl, excludeProviders } = job.data;
   logger.info({ transactionId, jobId: job.id }, 'Processing routing job');
@@ -45,41 +50,30 @@ async function processJob(job: Job<RoutingJobPayload>): Promise<void> {
     const response = await adapter.initiatePayment({
       transactionId, phone, amount, currency, country, operator, webhookUrl,
     });
-
     await updateAttempt(attempt.id, {
       providerTxId: response.providerTxId,
       status:       AttemptStatus.PENDING,
       latencyMs:    Date.now() - startedAt,
     });
-
     await createAuditLog({
-      transactionId,
-      event:   'PAYMENT_INITIATED',
+      transactionId, event: 'PAYMENT_INITIATED',
       payload: { provider: provider.name, providerTxId: response.providerTxId },
     });
-
     logger.info({ transactionId, provider: provider.name, providerTxId: response.providerTxId }, 'Payment initiated');
   } catch (rawErr) {
     const err       = normalizeProviderError(rawErr);
     const latencyMs = Date.now() - startedAt;
-
     await updateAttempt(attempt.id, {
-      status:       AttemptStatus.FAILED,
-      latencyMs,
-      errorCode:    err.code,
-      errorMessage: err.message,
-      resolvedAt:   new Date(),
+      status: AttemptStatus.FAILED, latencyMs, errorCode: err.code,
+      errorMessage: err.message, resolvedAt: new Date(),
     });
-
     await createAuditLog({ transactionId, event: 'PROVIDER_ERROR', payload: { provider: provider.name, ...err } });
-
     if (shouldFallback(err.code) && chain.length > 1) {
       const nextProvider = chain[1].provider.name;
       logFallback(transactionId, provider.name, nextProvider, err.code);
       await enqueueRoutingJob({
-        ...job.data,
-        excludeProviders: [...excludeProviders, provider.name],
-        attemptNumber:    job.data.attemptNumber + 1,
+        ...job.data, excludeProviders: [...excludeProviders, provider.name],
+        attemptNumber: job.data.attemptNumber + 1,
       });
     } else {
       await updateTransactionStatus(transactionId, TxStatus.FAILED);
@@ -91,20 +85,14 @@ async function processJob(job: Job<RoutingJobPayload>): Promise<void> {
 let worker: Worker<RoutingJobPayload> | null = null;
 
 export function startRoutingWorker(): Worker<RoutingJobPayload> {
-  const connection = {
-    host: new URL(env.REDIS_URL).hostname,
-    port: parseInt(new URL(env.REDIS_URL).port || '6379'),
-  };
-
-  worker = new Worker<RoutingJobPayload>(QUEUE_NAME, processJob, { connection, concurrency: CONCURRENCY });
-
+  worker = new Worker<RoutingJobPayload>(QUEUE_NAME, processJob, {
+    connection:  parseRedisUrl(env.REDIS_URL),
+    concurrency: CONCURRENCY,
+  });
   worker.on('completed', (job) =>
-    logger.info({ jobId: job.id, transactionId: job.data.transactionId }, 'Job completed'),
-  );
+    logger.info({ jobId: job.id, transactionId: job.data.transactionId }, 'Job completed'));
   worker.on('failed', (job, err) =>
-    logger.error({ jobId: job?.id, err }, 'Job failed'),
-  );
-
+    logger.error({ jobId: job?.id, err }, 'Job failed'));
   logger.info({ concurrency: CONCURRENCY }, 'Routing worker started');
   return worker;
 }
