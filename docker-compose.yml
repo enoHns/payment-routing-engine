@@ -2,7 +2,7 @@ version: '3.7'
 
 services:
   postgres:
-    image: postgres:11-alpine
+    image: postgres:16-alpine
     environment:
       POSTGRES_USER: routing
       POSTGRES_PASSWORD: routing_secret
@@ -19,7 +19,7 @@ services:
       retries: 5
 
   postgres_test:
-    image: postgres:11-alpine
+    image: postgres:16-alpine
     environment:
       POSTGRES_USER: routing_test
       POSTGRES_PASSWORD: routing_secret
@@ -31,13 +31,18 @@ services:
     restart: 'no'
 
   redis:
-    image: redis:5-alpine
+    image: redis:7-alpine
     ports:
       - '6379:6379'
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
     restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
 volumes:
   postgres_data:
