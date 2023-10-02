@@ -1,28 +1,40 @@
-import { FastifyInstance } from 'fastify';
-import { getPrismaClient } from '../db/prismaClient';
+import { FastifyPluginAsync } from 'fastify';
+import { prisma } from '../db/prismaClient';
 import { getRedisClient } from '../cache/redis';
+import logger from '../config/logger';
 
-export async function healthRoutes(app: FastifyInstance) {
-  app.get('/health', async (_req, reply) => {
-    const checks: Record<string, 'ok' | 'error'> = {};
+interface ServiceStatus { status: 'ok' | 'degraded'; latency: number }
 
-    // Check Postgres via Prisma
-    try {
-      await getPrismaClient().$queryRaw`SELECT 1`;
-      checks.postgres = 'ok';
-    } catch {
-      checks.postgres = 'error';
-    }
-
-    // Check Redis
-    try {
-      await getRedisClient().ping();
-      checks.redis = 'ok';
-    } catch {
-      checks.redis = 'error';
-    }
-
-    const allOk = Object.values(checks).every(v => v === 'ok');
-    reply.status(allOk ? 200 : 503).send({ status: allOk ? 'ok' : 'degraded', checks });
-  });
+async function checkDatabase(): Promise<ServiceStatus> {
+  const start = Date.now();
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return { status: 'ok', latency: Date.now() - start };
+  } catch (err) {
+    logger.warn({ err }, 'DB health check failed');
+    return { status: 'degraded', latency: Date.now() - start };
+  }
 }
+
+async function checkRedis(): Promise<ServiceStatus> {
+  const start = Date.now();
+  try {
+    const pong = await getRedisClient().ping();
+    return { status: pong === 'PONG' ? 'ok' : 'degraded', latency: Date.now() - start };
+  } catch (err) {
+    logger.warn({ err }, 'Redis health check failed');
+    return { status: 'degraded', latency: Date.now() - start };
+  }
+}
+
+export const healthRoutes: FastifyPluginAsync = async (fastify) => {
+  fastify.get('/health', async (_request, reply) => {
+    const [db, redis] = await Promise.all([checkDatabase(), checkRedis()]);
+    const allOk = db.status === 'ok' && redis.status === 'ok';
+    return reply.code(allOk ? 200 : 503).send({
+      status:    allOk ? 'ok' : 'degraded',
+      services:  { db, redis },
+      timestamp: new Date().toISOString(),
+    });
+  });
+};
