@@ -13,12 +13,12 @@ import logger from '../config/logger';
 import type { InitiatePaymentBody, InitiatePaymentResponse } from '../types/payment';
 
 const paymentSchema = z.object({
-  phone:          z.string().min(8).max(20),
-  amount:         z.number().positive(),
-  currency:       z.string().length(3).transform(v => v.toUpperCase()),
+  phone:          z.string().min(8).max(20).trim(),
+  amount:         z.number().positive().finite(),
+  currency:       z.string().length(3).toUpperCase(),
   idempotencyKey: z.string().uuid().optional(),
   webhookUrl:     z.string().url().optional(),
-});
+}).strict();
 
 type PaymentInput = z.infer<typeof paymentSchema>;
 
