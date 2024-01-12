@@ -50,7 +50,7 @@ model Attempt {
   transactionId  String
   providerName   String
   status         AttemptStatus @default(PENDING)
-  score          Float?
+  score          Float?    @db.DoublePrecision
   providerTxId   String?
   latencyMs      Int?
   errorCode      String?
