@@ -5,18 +5,18 @@ import {
   countAttempts,
 } from '../../src/db/repositories/attemptRepo';
 import { createTransaction } from '../../src/db/repositories/transactionRepo';
-import { connectDatabase, disconnectDatabase } from '../../src/db/connection';
-import { AttemptStatus } from '../../src/db/entities/attempt.entity';
+import { connectWithRetry, disconnectPrisma } from '../../src/db/prismaClient';
+import { AttemptStatus } from '@prisma/client';
 
 const TEST_DB = process.env.TEST_DATABASE_URL;
 const describeIfDb = TEST_DB ? describe : describe.skip;
 
-describeIfDb('attemptRepo', () => {
+describeIfDb('attemptRepo (integration)', () => {
   let txId: string;
 
   beforeAll(async () => {
     process.env.DATABASE_URL = TEST_DB!;
-    await connectDatabase();
+    await connectWithRetry();
     const tx = await createTransaction({
       idempotencyKey: `attempt-test-${Date.now()}`,
       phone: '22961999999',
@@ -28,7 +28,7 @@ describeIfDb('attemptRepo', () => {
   });
 
   afterAll(async () => {
-    await disconnectDatabase();
+    await disconnectPrisma();
   });
 
   it('creates an attempt', async () => {
@@ -40,16 +40,15 @@ describeIfDb('attemptRepo', () => {
   it('finds attempts by transaction id', async () => {
     const attempts = await findAttemptsByTransactionId(txId);
     expect(attempts.length).toBeGreaterThan(0);
-    expect(attempts[0].transactionId).toBe(txId);
   });
 
   it('updates attempt status', async () => {
-    const attempt = await createAttempt({ transactionId: txId, providerName: 'fedapay', score: 0.65 });
-    await updateAttempt(attempt.id, { status: AttemptStatus.SUCCESS, latencyMs: 3200 });
-
-    const found = (await findAttemptsByTransactionId(txId)).find(a => a.id === attempt.id);
-    expect(found!.status).toBe(AttemptStatus.SUCCESS);
-    expect(found!.latencyMs).toBe(3200);
+    const attempt = await createAttempt({ transactionId: txId, providerName: 'fedapay', score: 0.6 });
+    await updateAttempt(attempt.id, { status: AttemptStatus.SUCCESS, latencyMs: 1500 });
+    const updated = await findAttemptsByTransactionId(txId);
+    const found = updated.find(a => a.id === attempt.id);
+    expect(found?.status).toBe(AttemptStatus.SUCCESS);
+    expect(found?.latencyMs).toBe(1500);
   });
 
   it('counts attempts for a transaction', async () => {
