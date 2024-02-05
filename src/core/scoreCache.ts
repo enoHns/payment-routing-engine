@@ -21,6 +21,7 @@ export async function getCachedScore(
   }
 }
 
+// TODO: consider using a Lua script for atomic read-increment-set
 export async function setCachedScore(
   provider: string, operator: string, country: string, score: number,
 ): Promise<void> {

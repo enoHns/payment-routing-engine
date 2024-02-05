@@ -16,6 +16,8 @@ function isSuccessPayload(p: Record<string, unknown>): boolean {
   return s === 'success' || s === 'approved' || s === '00' || s === 'successful' || s === 'completed';
 }
 
+// FIXME: this is too generic — each provider adapter should expose its own
+// extractProviderTxId(). Works for now since field names don't clash across providers.
 function extractProviderTxId(p: Record<string, unknown>): string | undefined {
   return (p.transactionId ?? p.reference ?? p.cpm_trans_id ?? p.hash ?? p.token) as string | undefined;
 }
