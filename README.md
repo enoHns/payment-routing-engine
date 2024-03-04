@@ -6,22 +6,21 @@ Clone, plug in your aggregator adapters under `src/providers/`, and deploy.
 
 ---
 
-Integrating mobile money ([GSMA, 2021](https://www.gsma.com/solutions-and-impact/connectivity-for-good/mobile-for-development/wp-content/uploads/2021/03/GSMA_State-of-the-Industry-Report-on-Mobile-Money-2021_Full-report.pdf))
+Integrating mobile money payments in your app ([GSMA, 2026](https://www.gsma.com/sotir/wp-content/plugins/plugin_gsma_sotir/reports/The-State-of-the-Industry-Report-2026_English.pdf)) often means picking one aggregator and integrating it. That works until it doesn't:
 
-Cases
- in West Africa typically goes through aggregators. No single aggregator covers all operators across all countries, and when an incident hits — an operator-side interconnection issue, an aggregator outage, a specific corridor timing out — you have no fallback if you hardcoded one. Beyond availability, aggregators are not equivalent: success rates and latency differ by operator and shift over time.
+- some aggregators don't support all the operators your users are on
+- when a corridor degrades or an aggregator has issues, you have no routing alternative on your side
+- with multiple aggregators integrated, there's no standard way to decide which one to use at a given time
 
-This service applies a [weighted scoring model](https://en.wikipedia.org/wiki/Weighted_sum_model) per aggregator per operator corridor and routes each payment to the best available option. On retryable failure it falls back automatically down the ranked chain — the [circuit breaker](https://martinfowler.com/bliki/CircuitBreaker.html) logic is built in.
+This service adds a routing layer on top of your aggregators: it scores them per operator corridor using a [weighted scoring model](https://en.wikipedia.org/wiki/Weighted_sum_model), routes to the best available option, and falls back automatically on retryable failure — [circuit breaker](https://martinfowler.com/bliki/CircuitBreaker.html) built in.
 
-```
-score = 0.5 × successRate + 0.3 × latencyScore + 0.2 × priorityScore
-```
+---
 
 Scores derive from a 24h sliding window, cached 5 min in Redis, invalidated on each webhook. Cold start defaults to `0.5` across all components.
 
 ## Design decisions
 
-**Async dispatch.** `POST /payment` returns `202` immediately; the aggregator call runs in a [BullMQ](https://docs.bullmq.io/) worker. Aggregator latency on West Africa corridors can reach several seconds — blocking the HTTP response for retries is not viable under load.
+**Async dispatch.** `POST /payment` returns `202` immediately; the aggregator call runs in a [BullMQ](https://docs.bullmq.io/) worker. This decouples the HTTP response from the actual processing time and retry logic — the caller gets a predictable response regardless of what happens downstream.
 
 **Local operator registry.** Carrier detection uses longest-prefix match against `src/data/operatorRegistry.json`. No external DNS or API call per request — tradeoff is a manual update when operators add prefixes (a few times a year).
 
@@ -58,8 +57,4 @@ Final status via `webhookUrl` (request body) or poll `GET /transactions/:id`.
 
 ## License
 
-MIT
-
-## License
-
-MIT
+[MIT](LICENSE)
