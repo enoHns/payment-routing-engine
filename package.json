@@ -9,7 +9,7 @@
     "@typescript-eslint/parser": "1.13.0",
     "babel-jest": "^24.8.0",
     "babel-plugin-named-asset-import": "^0.3.3",
-    "babel-preset-react-app": "^9.0.1",
+    "babel-preset-react-app": "^10.1.0",
     "camelcase": "^5.2.0",
     "case-sensitive-paths-webpack-plugin": "2.2.0",
     "css-loader": "2.1.1",
