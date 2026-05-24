@@ -39,7 +39,9 @@ export class CinetpayAdapter implements ProviderAdapter {
   }
 
   verifyWebhook(payload: unknown, _signature?: string): boolean {
-    // CinetPay uses IP whitelist, not HMAC — validate payload structure
+    // CinetPay doesn't send a signature — they rely on IP allowlisting.
+    // IMPORTANT: the network must only accept inbound webhooks from CinetPay IPs.
+    // Without that, any caller knowing the payload shape can fake a webhook.
     if (typeof payload !== 'object' || payload === null) return false;
     const p = payload as Record<string, unknown>;
     return typeof p.cpm_trans_id === 'string' && typeof p.cpm_result === 'string';

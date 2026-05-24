@@ -3,6 +3,7 @@ import { RoutingJobPayload, enqueueRoutingJob } from './routingQueue';
 import { buildFallbackChain, shouldFallback, logFallback } from '../core/fallbackChain';
 import { getAdapter } from '../providers/adapterFactory';
 import { normalizeProviderError } from '../utils/httpError';
+import { parseRedisUrl } from '../config/redis';
 import {
   createAttempt,
   updateAttempt,
@@ -16,11 +17,6 @@ import logger from '../config/logger';
 
 const QUEUE_NAME  = 'routing';
 const CONCURRENCY = 3;
-
-function parseRedisUrl(url: string) {
-  const u = new URL(url);
-  return { host: u.hostname, port: parseInt(u.port || '6379', 10) };
-}
 
 async function processJob(job: Job<RoutingJobPayload>): Promise<void> {
   const { transactionId, operator, country, phone, amount, currency, webhookUrl, excludeProviders, redirectAllowed } = job.data;
@@ -54,8 +50,7 @@ async function processJob(job: Job<RoutingJobPayload>): Promise<void> {
     });
 
     if (response.status === 'REQUIRES_REDIRECT') {
-      // REDIRECT provider: store the checkout URL and wait for the webhook to confirm.
-      // No automatic fallback — the redirect is intentional, not an error.
+      // REDIRECT provider: store URL, webhook confirms later — not an error, skip fallback chain
       await updateAttempt(attempt.id, {
         providerTxId: response.providerTxId,
         status:       AttemptStatus.PENDING,
@@ -95,8 +90,7 @@ async function processJob(job: Job<RoutingJobPayload>): Promise<void> {
     await createAuditLog({ transactionId, event: 'PROVIDER_ERROR', payload: { provider: provider.name, ...err } });
 
     if (shouldFallback(err.code) && chain.length > 1) {
-      // Guard: check if a concurrent webhook already resolved the transaction.
-      // Without this check, a successful webhook + our retry = potential double-charge.
+      // webhook may have resolved this while we were failing
       const currentTx = await findTransactionById(transactionId);
       if (currentTx && (currentTx.status === TxStatus.SUCCESS || currentTx.status === TxStatus.FAILED)) {
         logger.info({ transactionId, status: currentTx.status }, 'Transaction already resolved — skipping fallback retry');
@@ -112,7 +106,7 @@ async function processJob(job: Job<RoutingJobPayload>): Promise<void> {
     } else {
       await updateTransactionStatus(transactionId, TxStatus.FAILED);
       await createAuditLog({ transactionId, event: 'TRANSACTION_FAILED', payload: { reason: err.code } });
-      logger.warn({ transactionId, provider: provider.name, errorCode: err.code }, 'Transaction failed — no more fallbacks');
+      logger.warn({ transactionId, provider: provider.name, errorCode: err.code }, 'Transaction failed, no fallback left');
     }
   }
 }

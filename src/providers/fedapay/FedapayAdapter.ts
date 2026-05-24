@@ -28,6 +28,6 @@ export class FedapayAdapter implements ProviderAdapter {
   verifyWebhook(payload: unknown, signature?: string): boolean {
     if (!signature) return false;
     const body = typeof payload === 'string' ? payload : JSON.stringify(payload);
-    return safeHmacCompare('sha512', env.FEDAPAY_PRIVATE_KEY, body, signature);
+    return safeHmacCompare('sha512', env.FEDAPAY_WEBHOOK_SECRET, body, signature);
   }
 }

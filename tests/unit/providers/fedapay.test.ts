@@ -3,7 +3,8 @@ import crypto from 'crypto';
 
 vi.mock('../../../src/config/env', () => ({
   env: {
-    FEDAPAY_PRIVATE_KEY: 'test-fedapay-secret',
+    FEDAPAY_PRIVATE_KEY:    'test-fedapay-key',
+    FEDAPAY_WEBHOOK_SECRET: 'test-fedapay-secret',
     NODE_ENV: 'test',
   },
 }));

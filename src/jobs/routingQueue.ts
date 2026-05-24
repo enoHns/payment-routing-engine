@@ -1,5 +1,6 @@
 import { Queue } from 'bullmq';
 import { env } from '../config/env';
+import { parseRedisUrl } from '../config/redis';
 import logger from '../config/logger';
 
 export interface RoutingJobPayload {
@@ -17,10 +18,6 @@ export interface RoutingJobPayload {
 
 const QUEUE_NAME = 'routing';
 
-function parseRedisUrl(url: string) {
-  const u = new URL(url);
-  return { host: u.hostname, port: parseInt(u.port || '6379', 10) };
-}
 
 let queue: Queue<RoutingJobPayload> | null = null;
 

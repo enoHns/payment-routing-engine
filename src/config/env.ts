@@ -21,8 +21,9 @@ const envSchema = z.object({
   KKIAPAY_TIMEOUT_MS:       z.coerce.number().default(30000),
 
   // ── FedaPay (optional) ─────────────────────────────────────────────────
-  FEDAPAY_PRIVATE_KEY:      z.string().default(''),   // renamed from FEDAPAY_SECRET_KEY
-  FEDAPAY_BASE_URL:         z.string().url().default('https://api.fedapay.com'),
+  FEDAPAY_PRIVATE_KEY:       z.string().default(''),
+  FEDAPAY_WEBHOOK_SECRET:    z.string().default(''),
+  FEDAPAY_BASE_URL:          z.string().url().default('https://api.fedapay.com'),
 
   // ── CinetPay (optional) ────────────────────────────────────────────────
   CINETPAY_API_KEY:         z.string().default(''),

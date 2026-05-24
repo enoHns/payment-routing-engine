@@ -65,7 +65,7 @@ model Attempt {
   transaction    Transaction   @relation(fields: [transactionId], references: [id])
 
   @@index([transactionId])
-  @@index([providerTxId])
+  @@unique([providerName, providerTxId])
   @@map("attempts")
 }
 
@@ -82,7 +82,7 @@ model ProviderMetric {
   updatedAt      DateTime @updatedAt
 
   @@unique([providerName, operator, country, windowStart])
-  @@index([providerName, operator, country])
+  @@index([providerName, operator, country, windowStart])
   @@map("provider_metrics")
 }
 

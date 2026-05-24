@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { FastifyPluginAsync } from 'fastify';
 import { getAllProviderCombinations } from '../../db/repositories/metricsRepo';
 import { getCachedScore, setCachedScore } from '../../core/scoreCache';
@@ -17,17 +18,17 @@ interface MetricEntry {
 }
 
 export const adminMetricsRoutes: FastifyPluginAsync = async (fastify) => {
-  // Auth guard: if ADMIN_API_KEY is configured, require x-api-key header.
-  // Leave unset in dev/test to keep the endpoint open.
+  // if ADMIN_API_KEY is set, require the header
   fastify.addHook('preHandler', async (request, reply) => {
     if (!env.ADMIN_API_KEY) return;
     const providedKey = request.headers['x-api-key'];
-    if (typeof providedKey !== 'string' || providedKey !== env.ADMIN_API_KEY) {
-      return reply.code(401).send({
-        statusCode: 401,
-        error: 'Unauthorized',
-        message: 'x-api-key header missing or invalid',
-      });
+    if (typeof providedKey !== 'string') {
+      return reply.code(401).send({ statusCode: 401, error: 'Unauthorized', message: 'x-api-key header missing or invalid' });
+    }
+    const a = crypto.createHash('sha256').update(providedKey).digest();
+    const b = crypto.createHash('sha256').update(env.ADMIN_API_KEY).digest();
+    if (!crypto.timingSafeEqual(a, b)) {
+      return reply.code(401).send({ statusCode: 401, error: 'Unauthorized', message: 'x-api-key header missing or invalid' });
     }
   });
 

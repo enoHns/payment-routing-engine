@@ -26,12 +26,6 @@ export async function findTransactionByIdempotencyKey(key: string): Promise<Tran
   });
 }
 
-/**
- * Update transaction status, guarding against overwriting terminal states.
- * Uses updateMany so the call is a no-op (not an error) when the transaction
- * is already SUCCESS / FAILED / REFUNDED — prevents double-charge in concurrent
- * webhook + fallback scenarios.
- */
 export async function updateTransactionStatus(
   id: string,
   status: TxStatus,
