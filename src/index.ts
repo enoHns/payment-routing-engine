@@ -11,7 +11,7 @@ async function bootstrap() {
   await connectWithRetry();
   getRedisClient();
   const server = await buildServer();
-  await server.listen(env.PORT, '0.0.0.0');
+  await server.listen({ port: env.PORT, host: '0.0.0.0' });
   logger.info({ port: env.PORT }, 'HTTP server listening');
   startRoutingWorker();
   logger.info('All systems nominal');

@@ -33,7 +33,7 @@ export async function buildServer(): Promise<FastifyInstance> {
       method:       request.method,
       url:          request.url,
       statusCode:   reply.statusCode,
-      responseTime: reply.getResponseTime(),
+      responseTime: reply.elapsedTime,
       requestId:    request.id,
     }, 'Response sent');
     done();
