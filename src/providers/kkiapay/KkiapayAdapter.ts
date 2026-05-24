@@ -3,18 +3,6 @@ import { safeHmacCompare } from '../../utils/crypto';
 import { kkiapayConfig } from './kkiapay.config';
 import logger from '../../config/logger';
 
-/**
- * KkiapayAdapter — REDIRECT integration mode.
- *
- * KKiaPay does not expose a server-side mobile-money collection API.
- * Payment is initiated by redirecting the customer to KKiaPay's hosted
- * checkout widget.  The engine builds a signed URL embedding the amount,
- * phone number, and a callback endpoint; the provider calls that endpoint
- * once the customer has confirmed payment on their device.
- *
- * Verification of incoming webhook payloads uses HMAC-SHA256 with the
- * KKIAPAY_HMAC_KEY configured in the dashboard (Webhook Secret).
- */
 export class KkiapayAdapter implements ProviderAdapter {
   readonly name = 'kkiapay';
   readonly integrationMode: ProviderIntegrationMode = 'REDIRECT';

@@ -26,8 +26,7 @@ export async function rankProviders(
         return { provider, score: cached, fromCache: true };
       }
       const stats = await getRecentProviderStats(provider.name, operator, country);
-      // TODO: allow per-provider weight overrides via config (different SLAs)
-      const score = computeProviderScore(stats, provider.priority, maxPriority, DEFAULT_WEIGHTS);
+      const score = computeProviderScore(stats, provider.priority, maxPriority, provider.weights ?? DEFAULT_WEIGHTS);
       await setCachedScore(provider.name, operator, country, score);
       return { provider, score, fromCache: false };
     }),

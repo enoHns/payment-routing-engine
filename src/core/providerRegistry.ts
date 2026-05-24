@@ -1,5 +1,6 @@
 import providerConfig from '../data/providerConfig.json';
 import type { ProviderIntegrationMode } from '../providers/base/ProviderAdapter';
+import type { ScoringWeights } from './scoringEngine';
 
 export interface ProviderConfig {
   name: string;
@@ -9,6 +10,7 @@ export interface ProviderConfig {
   supportedOperators: Record<string, string[]>;
   priority: number;
   active: boolean;
+  weights?: ScoringWeights;
 }
 
 export function getEligibleProviders(country: string, operator: string): ProviderConfig[] {

@@ -10,7 +10,8 @@
         "BJ": ["MTN", "Moov"]
       },
       "priority": 1,
-      "active": true
+      "active": true,
+      "weights": { "successRate": 0.8, "latency": 0.0, "priority": 0.2 }
     },
     {
       "name": "fedapay",

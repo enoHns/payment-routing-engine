@@ -53,6 +53,8 @@ Pass `"redirectAllowed": false` to exclude REDIRECT providers from the fallback 
 
 ## Design decisions
 
+**Scoring weights.** The default weighting is `successRate 0.5 / latency 0.3 / priority 0.2`. Each provider can override this in `providerConfig.json` via a `weights` field — useful when latency is irrelevant (e.g. a REDIRECT provider where initiation is just URL construction) or when one corridor has stricter SLAs. Providers without explicit weights fall back to the defaults.
+
 **Async dispatch.** `POST /payment` returns `202` immediately; the aggregator call runs in a [BullMQ](https://docs.bullmq.io/) worker. This decouples the HTTP response from the actual processing time and retry logic — the caller gets a predictable response regardless of what happens downstream.
 
 **Local operator registry.** Carrier detection uses longest-prefix match against `src/data/operatorRegistry.json`. No external DNS or API call per request — tradeoff is a manual update when operators add prefixes (a few times a year). The registry covers both the old 8-digit Benin format and the new 10-digit format introduced by ARCEP on September 12, 2022 (prepend `01` to all local numbers).

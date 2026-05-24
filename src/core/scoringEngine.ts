@@ -1,9 +1,4 @@
-/**
- * Phase 4 — Provider Scoring Engine
- *
- * score = w_sr * successRate + w_lat * latencyScore + w_pri * priorityScore
- * All components in [0..1]. Higher = better.
- */
+// score = w_sr * successRate + w_lat * latencyScore + w_pri * priorityScore
 
 export interface ProviderStats {
   successCount:   number;
